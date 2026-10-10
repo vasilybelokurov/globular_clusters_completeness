@@ -1,0 +1,18 @@
+{
+  "extinction": "map_high",
+  "N_obs": 165,
+  "N_corr": 411.0694281393496,
+  "N_corr_p16": 318.73693786328676,
+  "N_corr_p84": 565.8762729076835,
+  "faint_obs": 55,
+  "faint_corr": 196.93733306099958,
+  "faint_corr_p16": 140.20402600905553,
+  "faint_corr_p84": 291.0272373406819,
+  "lnL_CV": 14.208598100304982,
+  "k_CV": 7,
+  "lnL_free_classC(d)": 6.7558315441519445,
+  "k_free": 6,
+  "AIC_CV": -14.417196200609965,
+  "AIC_free": -1.511663088303889,
+  "anchor": "brightest-V bin complete (C=1)"
+}

@@ -34,9 +34,11 @@ extinction-free apparent magnitude $V$, completeness falls from 1 at $V<6$ (assu
 $V>11$. Weighting each cluster by the inverse of its orbit-averaged completeness turns 165 observed
 GCs into $483$ ($68\%$: $335$--$765$); the faint clusters ($\MV>-6.5$) rise from 55 to $267$
 ($168$--$473$). Mocks show these totals are lower limits, because faint clusters on orbits that never
-enter the detectable volume cannot be recovered by reweighting observed orbits. A first extinction
-test raises the total by $\approx 40\%$ but is disfavoured by the data, so extinction remains the
-leading open systematic.
+enter the detectable volume cannot be recovered by reweighting observed orbits. Adding extinction
+along every orbit from 3D dust maps (DECaPS, Bayestar19, Marshall, with SFD beyond their reach)
+improves the fit by $\Delta\mathrm{AIC}\approx 8$ and gives a corrected total of 411--455 (faint:
+197--218). A simpler latitude proxy, completeness $C_V(V)\,g(|b|)$, gives 520. Across the models
+the data support, the corrected total is about 410--520 and remains a lower limit.
 \end{abstract}
 
 %======================================================================
@@ -333,20 +335,137 @@ distributions using $C(V)$. Lower panels: corrected/observed.}
 \label{fig:corr}
 \end{figure}
 
-\subsection{Sensitivity to extinction}
+\subsection{Why extinction matters, and what the mocks show}
+\label{sec:whydust}
+
+Whether a cluster is found depends on how bright it looks, and dust makes it look fainter: the
+relevant apparent magnitude is $V + A_V$, not $V$. Dust is concentrated in the Galactic disc, and
+most GCs live in the inner Galaxy, where many sightlines cross the disc and the bulge. The
+catalogue's present-day reddenings reach $E(B-V) = 6.8$, i.e.\ $A_V \approx 21$ mag, and half the
+clusters have $A_V > 1$ mag.
+
+Extinction enters the phase likelihood in two places.
+\begin{enumerate}
+\item \textbf{The shape of $C$.} Along an orbit a cluster's brightness changes not only with distance
+but also with the sightline: passing behind the bulge it can dim by several magnitudes at almost
+the same distance. If $A_V$ is left out, the fit can only attribute that dimming to distance or
+luminosity, which distorts $C(V)$.
+\item \textbf{The corrected counts.} An orbit that spends time behind thick dust is detectable for a
+smaller fraction of its period. Ignoring the dust overestimates its orbit-averaged completeness
+$q_i$, so its weight $1/q_i$ is too small and the counts are under-corrected.
+\end{enumerate}
+Because extinction depends on direction as well as distance, it also breaks the assumption that
+completeness depends on $\MV$ and $\dhel$ alone, unless it is folded into $V$.
+
+To test this we added a mock scenario (E) in which detection depends on $V + A_V$, with $A_V$
+computed along every orbit from an exponential dust disc ($A_V$ of 1 mag kpc$^{-1}$ in the plane at
+the solar circle, radial scale 3 kpc, vertical scale 0.1 kpc). We then fit each mock twice: with the
+true $A_V$ added to $V$, and ignoring dust. Over 100 realisations:
+\begin{itemize}
+\item \textbf{The completeness curve is recovered when dust is included:} recovered/true $C(V+A_V)$
+is $1.00$, with 68\% coverage $0.62$.
+\item \textbf{Including dust reduces the bias in the corrected counts, but does not remove it:} the
+corrected total is $0.61$ of the truth with the correct $A_V$ and $0.51$ ignoring dust; for faint
+clusters ($\MV>-6.5$) the figures are $0.18$ and $0.16$. The remaining shortfall is the
+unseen-orbit limitation of Sec.~\ref{sec:mocks}, which dust makes worse because it hides more
+orbits entirely: only 6\% of the faint mock clusters are detected.
+\item \textbf{The likelihood can tell a correct dust model from no dust:} the AIC favours the true
+extinction model over ignoring dust in 98\% of the realisations.
+\end{itemize}
+The last point matters for the real data. The likelihood comparison is a sensitive test, so the
+preference for no extinction over the present-day-reddening model in Sec.~\ref{sec:ext} is evidence
+against that particular model, rather than against the importance of dust. Separately, mock
+scenario B, whose latitude-dependent selection mimics dust that the model does not include, biases
+the corrected total low (0.56 of the truth).
+
+\subsection{Extinction: present-day reddening, 3D maps, and simple proxies}
 \label{sec:ext}
 
-Adding $A_V = 3.1\,E(B-V)$, with each cluster's present-day reddening held fixed along its orbit,
-changes the totals substantially: 690 ($457$--$1172$) in total and 337 ($203$--$652$) faint
-(Fig.~\ref{fig:ext}). The data disfavour this model, however: its AIC is $+1.3$, against $-6.0$
-without extinction and $-1.5$ for free per-class fits. Holding present reddening fixed as a cluster
-moves to other sightlines is unphysical, so this test shows that extinction matters at the 40\% level
-but does not measure its effect.
+We tested three treatments of dust, each compared with the no-dust $C(V)$ fit by AIC
+(Table~\ref{tab:dust}).
+
+\paragraph{Present-day reddening held fixed.} Adding $A_V = 3.1\,E(B-V)$, with each cluster's
+catalogue reddening at its present position held fixed along its whole orbit, raises the totals to
+689 ($457$--$1172$) and 337 ($203$--$651$) faint. The data disfavour this model (AIC $+1.3$ against
+$-6.0$ without dust). Holding present reddening fixed while a cluster moves to other sightlines is
+unphysical; this test shows only that the total is sensitive, by about 43\%, to an untested
+prescription.
+
+\paragraph{3D dust maps along each orbit.} We evaluate extinction at every one of the
+$165\times500$ orbit samples with the \texttt{dustmaps} package. The maps are combined by priority:
+DECaPS 3D (Zucker et al.\ 2025; southern plane $239^\circ<l<6^\circ$, $|b|<10^\circ$, reliable to
+10 kpc), then Bayestar19 (Green et al.\ 2019; where flagged reliable), then Marshall et al.\ (2006;
+inner plane, within each sightline's last distance slice), and SFD (Schlegel et al.\ 1998) otherwise. DECaPS supplies
+$A_V$ for 24\% of the orbit samples, Marshall for 13\%, Bayestar19 for 8\% and SFD for the remaining
+55\%, mostly at high latitude. Conversions: $A_V = 3.1\,E(B-V)$ for DECaPS and Bayestar19
+($E(B-V) = 0.883\times$ the Bayestar19 value), $A_V = 8.8\,A_{K_s}$ for Marshall, and
+$A_V = 2.742\,E(B-V)_{\rm SFD}$ (Schlafly \& Finkbeiner 2011). Beyond a 3D map's reliable distance
+the true $A_V$ is bracketed: the low bracket keeps the map's last value (no more dust), the high
+bracket uses the SFD total of the sightline (all its dust in front). At the clusters' present
+positions the maps give 5--8\% less extinction than the catalogue reddening (median map/catalogue ratio 0.92 and 0.95 for the low and high brackets, 144 clusters with catalogue $A_V>0.1$).
+
+This model fits the data best (AIC $-13.7$ and $-14.4$ for the two brackets, against $-6.0$
+without dust). Since the mocks show the likelihood picks the correct dust model in 98\% of
+realisations (Sec.~\ref{sec:whydust}), the improvement is meaningful. The corrected total
+\emph{falls} to 411--455, with tighter intervals, and the faint count to 197--218
+(Fig.~\ref{fig:ext}). Accounting for dust lets distant clusters behind it count as dimmed rather
+than distant, which changes the shape of $C$. With dust, the correction for metal-poor clusters
+($\feh<-1$) drops from $\times3.1$ to $\times2.4$, while that for metal-rich clusters stays at
+$\times2.6$, so the two now receive similar corrections.
+
+\paragraph{Simple obscuration proxies.} Without 3D maps, obscuration can be fitted directly: we write
+$C = C_V(V)\,g(x)$, with $x$ either $|b|$ or the 2D SFD reddening of the sightline at each orbit
+sample, and $g$ a step function in three equal-count bins anchored to 1 in the least obscured bin.
+The phase likelihood learns $g$ from where along their orbits the clusters are caught. On mocks
+(Table~\ref{tab:proxy}) the proxies do no harm when there is no obscuration and reduce the
+shortfall when there is; the AIC prefers them over $C(V)$ in 12--15\% of null mocks and in 69--71\%
+of the dust mocks. On the real data, $g(|b|)$ fits better than no dust (AIC $-10.4$), with clusters
+in the lowest-$|b|$ third detected about half as often ($g = 0.49$), and gives a corrected total of
+520; the 2D-SFD proxy is weaker (AIC $-7.5$; total 462).
+
+\begin{table}[h]
+\centering
+\caption{Real data: dust treatments compared. AIC is relative to the same data (lower is better);
+totals and faint counts ($\MV>-6.5$) with 68\% bootstrap intervals.}
+\label{tab:dust}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}
+\toprule
+Model & AIC & Corrected total & Faint \\
+\midrule
+No extinction, $C(V)$ & $-6.0$ & 483 ($335$--$765$) & 267 ($168$--$473$) \\
+Present $E(B-V)$ fixed along orbit & $+1.3$ & 689 ($457$--$1172$) & 337 ($203$--$651$) \\
+Proxy $C_V(V)\,g(E(B-V)_{\rm SFD})$ & $-7.5$ & 462 ($346$--$668$) & 251 \\
+Proxy $C_V(V)\,g(|b|)$ & $-10.4$ & 520 ($400$--$753$) & 269 \\
+3D maps along orbits, low bracket & $-13.7$ & 455 ($354$--$634$) & 218 ($158$--$327$) \\
+3D maps along orbits, high bracket & $\mathbf{-14.4}$ & 411 ($319$--$566$) & 197 ($140$--$291$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Mocks: corrected total / true (faint in brackets), median over 100 realisations, for
+$C(V)$ alone and the two proxy models. In scenario E, the $C(V)$ column ignores dust; with the
+true $A_V$ supplied, the total is 0.61 (faint 0.18).}
+\label{tab:proxy}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}
+\toprule
+Scenario & $C(V)$ & $C_V(V)\,g(|b|)$ & $C_V(V)\,g(\text{2D column})$ \\
+\midrule
+A: no obscuration & $0.80$ ($0.44$) & $0.83$ ($0.43$) & $0.82$ ($0.41$) \\
+B: latitude-dependent selection & $0.56$ ($0.27$) & $0.64$ ($0.31$) & $0.65$ ($0.31$) \\
+E: dust disc & $0.51$ ($0.16$) & $0.68$ ($0.19$) & $0.69$ ($0.19$) \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{paper_corrected_present_ebv.png}
-\caption{As Fig.~\ref{fig:corr}, with $A_V = 3.1\,E(B-V)$ at the present position added to $V$.}
+\includegraphics[width=\textwidth]{paper_corrected_map_high.png}
+\caption{As Fig.~\ref{fig:corr}, with $A_V$ from 3D dust maps evaluated along every orbit
+(high bracket, the best-fitting model).}
 \label{fig:ext}
 \end{figure}
 
@@ -361,8 +480,10 @@ bright GCs share one orbit distribution --- after which each faint cluster can b
 fraction of the orbit population from which it would be visible, in the spirit of $1/V_{\max}$
 (Schmidt 1968). Such a total must be reported separately and tested against corrected orbit
 distributions of bright and faint clusters, by population.
-\item \textbf{Extinction.} Evaluate a 3D dust map along each orbit and add $A_V$ to $V$; test on mocks
-with direction-dependent extinction.
+\item \textbf{Extinction.} The 3D-map treatment rests on fixed conversions (in particular
+$A_V = 8.8\,A_{K_s}$ for Marshall, uncertain in the inner Galaxy) and on SFD beyond the maps' reach.
+Map uncertainties and alternative extinction laws are not propagated; mocks with map-based rather
+than analytic dust would test the full chain.
 \item \textbf{Error propagation.} The intervals cover sampling noise only. An ensemble of perturbed
 phase-space coordinates, alternative potentials and longer, denser integrations would give the
 systematic spread.
@@ -378,19 +499,29 @@ shows where that may fail.
 \begin{thebibliography}{9}
 \bibitem{astropy22} Astropy Collaboration et al.\ 2022, ApJ, 935, 167,
 \href{https://doi.org/10.3847/1538-4357/ac7c74}{doi:10.3847/1538-4357/ac7c74}
+\bibitem{green19} Green G.~M.\ et al.\ 2019, ApJ, 887, 93,
+\href{https://doi.org/10.3847/1538-4357/ab5362}{doi:10.3847/1538-4357/ab5362}
 \bibitem{ht52} Horvitz D.~G., Thompson D.~J.\ 1952, J.\ Am.\ Stat.\ Assoc., 47, 663,
 \href{https://doi.org/10.1080/01621459.1952.10483446}{doi:10.1080/01621459.1952.10483446}
 \bibitem{khop25} Khoperskov S.\ et al.\ 2025, A\&A, 695, A220,
 \href{https://doi.org/10.1051/0004-6361/202453304}{doi:10.1051/0004-6361/202453304},
 \href{https://arxiv.org/abs/2411.15062}{arXiv:2411.15062}
+\bibitem{marshall06} Marshall D.~J.\ et al.\ 2006, A\&A, 453, 635,
+\href{https://doi.org/10.1051/0004-6361:20053842}{doi:10.1051/0004-6361:20053842}
 \bibitem{massari19} Massari D., Koppelman H.~H., Helmi A.\ 2019, A\&A, 630, L4,
 \href{https://doi.org/10.1051/0004-6361/201936135}{doi:10.1051/0004-6361/201936135}
+\bibitem{sf11} Schlafly E.~F., Finkbeiner D.~P.\ 2011, ApJ, 737, 103,
+\href{https://doi.org/10.1088/0004-637X/737/2/103}{doi:10.1088/0004-637X/737/2/103}
+\bibitem{sfd98} Schlegel D.~J., Finkbeiner D.~P., Davis M.\ 1998, ApJ, 500, 525,
+\href{https://doi.org/10.1086/305772}{doi:10.1086/305772}
 \bibitem{schmidt68} Schmidt M.\ 1968, ApJ, 151, 393,
 \href{https://doi.org/10.1086/149446}{doi:10.1086/149446}
 \bibitem{vasiliev19} Vasiliev E.\ 2019, MNRAS, 482, 1525,
 \href{https://doi.org/10.1093/mnras/sty2672}{doi:10.1093/mnras/sty2672}
 \bibitem{vb21} Vasiliev E., Baumgardt H.\ 2021, MNRAS, 505, 5978,
 \href{https://doi.org/10.1093/mnras/stab1475}{doi:10.1093/mnras/stab1475}
+\bibitem{zucker25} Zucker C.\ et al.\ 2025, A deep, high-angular resolution 3D dust map of the southern
+Galactic plane, \href{https://arxiv.org/abs/2503.02657}{arXiv:2503.02657}
 \end{thebibliography}
 
 \end{document}

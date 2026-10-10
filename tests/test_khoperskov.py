@@ -197,3 +197,41 @@ def test_cv_recovers_C_of_V_and_corrected_total():
     q = CV.cluster_q(V_t[det], e, f["C"])
     # brightest bin is ~complete in truth, so the corrected total should recover n within ~10%
     assert abs((1 / q).sum() / n - 1) < 0.1
+
+
+def test_profile_interval_returns_nan_when_nuisance_fit_fails(monkeypatch):
+    from gc_completeness import phaselike as PL
+    rng = np.random.default_rng(6)
+    d_t = _toy_orbits(300, rng)
+    edges = np.array([0, 10, 25, 150.0])
+    F = PL.time_fractions(d_t, edges)
+    kn = PL.bin_index(d_t[:, 0], edges)
+    fr = PL.fit(F, kn)
+
+    class Bad:  # optimiser reports failure with a finite objective
+        success, fun, x = False, 1.0, np.zeros(1)
+    monkeypatch.setattr(PL, "minimize", lambda *a, **k: Bad())
+    lo, hi = PL.profile_interval(F, kn, fr, 0)
+    assert np.isnan(lo) and np.isnan(hi)
+
+
+def test_separable_cv_recovers_both_factors():
+    from gc_completeness import cv as CV
+    rng = np.random.default_rng(7)
+    n, T = 4000, 300
+    d_t = _toy_orbits(n, rng, T)
+    x_t = np.abs(np.sin(np.linspace(0, 6 * np.pi, T)[None, :] + rng.uniform(0, 6.3, (n, 1)))) * 30  # |b|-like
+    M = rng.normal(-7.4, 1.2, n)
+    V_t = CV.apparent_mag(M, d_t)
+    eV = np.array([-np.inf, 8.0, 10.0, np.inf]); ex = np.array([-np.inf, 5.0, 12.0, np.inf])  # populated bins
+    CVt = np.array([1.0, 0.5, 0.2]); gt = np.array([0.9, 0.6, 1.0])
+    import gc_completeness.phaselike as PL
+    Ct = CVt[PL.bin_index(V_t, eV)] * gt[PL.bin_index(x_t, ex)]
+    det = rng.random(n) < Ct.mean(1)
+    p = Ct[det] / Ct[det].sum(1, keepdims=True)
+    idx = (np.cumsum(p, 1) < rng.random(det.sum())[:, None]).sum(1)
+    ii = np.arange(det.sum())
+    f = CV.fit_cv_sep(V_t[det], x_t[det], V_t[det][ii, idx], x_t[det][ii, idx], eV, ex)
+    assert np.allclose(f["C_V"], CVt / CVt[0], atol=0.08)
+    # over 10 seeds: g biased high by ~5% (0.70 vs 0.67, 1.18 vs 1.11), per-realisation sd 0.05-0.09
+    assert np.allclose(f["g"], gt / gt[0], atol=0.2)

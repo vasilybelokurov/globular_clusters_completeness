@@ -255,13 +255,23 @@ def fig_real_cv(cfg, c, d_t):
     save(fig, "paper_real_cv.png")
 
 
-def fig_corrected(cfg, c, d_t, ext):
+def fig_corrected(cfg, c, d_t, ext, lib=None):
     """Corrected M_V and [Fe/H]; bootstrap replicates regenerated exactly as in run_cv.py (same seed and order)."""
-    tag = "" if ext == "none" else "_present_ebv"
+    tag = "" if ext == "none" else f"_{ext}"
     tab = pd.read_csv(CVD / f"real_cv{tag}.csv")
     M = c["M_V"].values.astype(float); feh = c["feh"].values.astype(float); d_now = c["distance"].values.astype(float)
-    A_V = 3.1 * c["ebv"].values.astype(float) if ext == "present_ebv" else np.zeros(len(c))
-    V_t, V_now = CV.apparent_mag(M, d_t, A_V), CV.apparent_mag(M, d_now, A_V)
+    if ext in ("map_low", "map_high"):   # cached A_V along orbits (same tag as run_cv.py)
+        from gc_completeness import dust as DU
+        from gc_completeness.potential import potential_label
+        base = yaml.safe_load(open(cfg["catalog_config"]))
+        l_t, b_t, _ = GalactocentricToGalactic(GalacticParams.from_dict(base.get("galactocentric")))(lib.xyz)
+        dz = DU.orbit_extinction(l_t, b_t, d_t, cfg["cache_dir"],
+                                 tag=f"{potential_label(base['potential'])}|{lib.xyz.shape}|{float(lib.xyz.sum()):.6e}")
+        A_t = dz["A_low"] if ext == "map_low" else dz["A_high"]
+        V_t, V_now = CV.apparent_mag(M, d_t, A_t), CV.apparent_mag(M, d_now, A_t[:, 0])
+    else:
+        A_V = 3.1 * c["ebv"].values.astype(float) if ext == "present_ebv" else np.zeros(len(c))
+        V_t, V_now = CV.apparent_mag(M, d_t, A_V), CV.apparent_mag(M, d_now, A_V)
     edges = np.r_[tab.V_lo.values, tab.V_hi.values[-1]]
     w = 1.0 / CV.cluster_q(V_t, edges, tab.C.values)
     rng = np.random.default_rng(cfg["seed"] + 3)
@@ -312,6 +322,7 @@ def main():
     fig_real_cv(cfg, c, d_t)
     fig_corrected(cfg, c, d_t, "none")
     fig_corrected(cfg, c, d_t, "present_ebv")
+    fig_corrected(cfg, c, d_t, "map_high", lib)
 
 
 if __name__ == "__main__":

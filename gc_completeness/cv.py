@@ -61,3 +61,39 @@ def implied_class_curve(V_t, d_t, edges_V, C, d_edges) -> np.ndarray:
     with np.errstate(divide="ignore", invalid="ignore"):
         c = num / den
     return c / c[0]
+
+
+# ---------------------------------------------------------------------------
+# Separable model C = C_V(V) * g(x), x = an obscuration proxy along the orbit (|b| or 2D E(B-V))
+# ---------------------------------------------------------------------------
+def _ll_sep(theta, kV, kx, kV0, kx0, nV, nx):
+    """ln L = sum_i [ thV[kV0_i] + thx[kx0_i] - ln <exp(thV[kV_it] + thx[kx_it])>_t ];
+    thV[0] = 0 (brightest V), thx[0] = 0 (least obscured x)."""
+    thV = np.r_[0.0, theta[:nV - 1]]
+    thx = np.r_[0.0, theta[nV - 1:]]
+    e = np.exp(thV[kV] + thx[kx])                       # (N, T)
+    den = e.mean(1)
+    ll = (thV[kV0] + thx[kx0]).sum() - np.log(den).sum()
+    w = e / (den[:, None] * e.shape[1])                 # per-sample responsibility, rows sum to 1
+    gV = np.bincount(kV0, minlength=nV) - np.bincount(kV.ravel(), weights=w.ravel(), minlength=nV)
+    gx = np.bincount(kx0, minlength=nx) - np.bincount(kx.ravel(), weights=w.ravel(), minlength=nx)
+    return ll, np.r_[gV[1:], gx[1:]]
+
+
+def fit_cv_sep(V_t, x_t, V_now, x_now, eV, ex) -> dict:
+    """MLE of C_V (V bins eV) and g (x bins ex), both relative to their first bin."""
+    from scipy.optimize import minimize
+    kV, kV0 = PL.bin_index(V_t, eV), PL.bin_index(V_now, eV)
+    kx, kx0 = PL.bin_index(x_t, ex), PL.bin_index(x_now, ex)
+    nV, nx = len(eV) - 1, len(ex) - 1
+    res = minimize(lambda t: tuple(-v for v in _ll_sep(t, kV, kx, kV0, kx0, nV, nx)), np.zeros(nV + nx - 2),
+                   jac=True, method="L-BFGS-B", bounds=[PL.THETA_BOUNDS] * (nV + nx - 2))
+    CV_ = np.r_[1.0, np.exp(res.x[:nV - 1])]
+    g = np.r_[1.0, np.exp(res.x[nV - 1:])]
+    return {"C_V": CV_, "g": g, "ll": -float(res.fun), "n_par": nV + nx - 2, "success": bool(res.success),
+            "kV": kV, "kx": kx}
+
+
+def cluster_q_sep(fit: dict) -> np.ndarray:
+    """q_i = <C_V(V_it) g(x_it)>_t."""
+    return (fit["C_V"][fit["kV"]] * fit["g"][fit["kx"]]).mean(1)

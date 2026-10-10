@@ -81,7 +81,7 @@ def profile_interval(F, kn, fitres, j: int, delta: float = 0.5) -> tuple[float, 
             ll, g = _ll(t, F, kn)
             return -ll, -g[others]
         r = minimize(f, th_hat[others], jac=True, method="L-BFGS-B", bounds=[THETA_BOUNDS] * len(others))
-        if not r.success and not np.isfinite(r.fun):
+        if not r.success or not np.isfinite(r.fun):
             raise RuntimeError("profile nuisance fit failed")
         return -r.fun
 

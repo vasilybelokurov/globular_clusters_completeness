@@ -32,6 +32,7 @@ from gc_completeness.orbits import integrate_orbits  # noqa: E402
 from gc_completeness.plotting import plt, C, INK, MUTED  # noqa: E402
 from gc_completeness.potential import build_potential, potential_label  # noqa: E402
 from gc_completeness.mocks import sample_population  # noqa: E402
+from gc_completeness import dust as DU  # noqa: E402
 
 MV_EDGES = np.arange(-11, 0.01, 0.75)
 
@@ -65,9 +66,33 @@ def per_class_free_ll(M, d_t, d_now, n_classes, n_min_d, d_hi):
     return ll, k, curves
 
 
-def analyse(M, d_t, d_now, cfg, n_boot, rng, A_V=0.0):
+def analyse_sep(M, d_t, d_now, x_t, x_now, cfg, n_boot, rng):
+    """C = C_V(V) * g(x); x is an obscuration proxy (larger = more obscured); 3 equal-count x bins,
+    first x bin (least obscured) and brightest V bin anchored at 1."""
+    from gc_completeness.adaptive import equal_count_edges
+    V_t, V_now = CV.apparent_mag(M, d_t), CV.apparent_mag(M, d_now)
+    eV = CV.v_edges(V_now, cfg["n_min_v"])
+    ex = equal_count_edges(x_now, max(1, len(x_now) // cfg.get("n_x_bins", 3)), lo=-np.inf, hi=np.inf)
+    f = CV.fit_cv_sep(V_t, x_t, V_now, x_now, eV, ex)
+    w = 1.0 / CV.cluster_q_sep(f)
+    N = len(M); boot_idx, boot_w = [], []
+    for _ in range(n_boot):
+        idx = rng.integers(0, N, N)
+        fb = CV.fit_cv_sep(V_t[idx], x_t[idx], V_now[idx], x_now[idx], eV, ex)
+        boot_idx.append(idx); boot_w.append(1.0 / CV.cluster_q_sep(fb))
+    return dict(fit=f, w=w, eV=eV, ex=ex, aic=2 * f["n_par"] - 2 * f["ll"],
+                boot_idx=np.array(boot_idx, int).reshape(n_boot, N), boot_w=np.array(boot_w).reshape(n_boot, N))
+
+
+def analyse_A(M, d_t, d_now, cfg, n_boot, rng, A_t):
+    """As analyse(), with extinction varying along each orbit: A_t (N, T); present = column 0
+    for real data (orbits start at the present position). d_now must equal d_t[:, 0] here."""
+    return analyse(M, d_t, d_now, cfg, n_boot, rng, A_V=A_t, A_now=A_t[:, 0])
+
+
+def analyse(M, d_t, d_now, cfg, n_boot, rng, A_V=0.0, A_now=None):
     V_t = CV.apparent_mag(M, d_t, A_V)
-    V_now = CV.apparent_mag(M, d_now, A_V)
+    V_now = CV.apparent_mag(M, d_now, A_V if A_now is None else A_now)
     e = CV.v_edges(V_now, cfg["n_min_v"])
     f = CV.fit_cv(V_t, V_now, e)
     q = CV.cluster_q(V_t, e, f["C"])
@@ -120,13 +145,27 @@ def mock_one(args):
     M = rng.normal(*mk["gclf"], len(ic))
     lib = integrate_orbits(pot, ic, cfg["orbits"]["integration_time_gyr"], cfg["orbits"]["n_samples"])
     N, T = lib.xyz.shape[:2]
-    _, b, d = GalactocentricToGalactic(frame)(lib.xyz)
+    l, b, d = GalactocentricToGalactic(frame)(lib.xyz)
     p = np.where(mixed, rng.integers(0, T, N), 0); ii = np.arange(N)
-    det = rng.random(N) < true_C(M, d[ii, p], b[ii, p], scen, mk["completeness"])
-    res = analyse(M[det], d[det], d[ii, p][det], cfg, mk["n_bootstrap"], rng)
+    A = DU.disc_extinction(l, b, d, **scen["dust"]) if "dust" in scen else np.zeros_like(d)   # true A_V along orbits
+    Meff = M[:, None] + A                                  # detection depends on V + A_V
+    det = rng.random(N) < true_C(Meff[ii, p], d[ii, p], b[ii, p], scen, mk["completeness"])
+    sep = {}
+    if mk.get("proxy_tests", False):
+        xs = {"absb": (-np.abs(b), -np.abs(b[ii, p])),                      # larger x = closer to the plane
+              "sightline": (lambda S: (S, S[ii, p]))(DU.disc_extinction(l, b, np.full_like(d, 100.0), **mk.get(
+                  "proxy_disc", {"a0": 1.0, "h_R": 3.0, "h_z": 0.1})))}       # 2D total column (SFD-like)
+        for name, (xt, xn) in xs.items():
+            sep[name] = analyse_sep(M[det], d[det], d[ii, p][det], xt[det], xn[det], cfg, 0, rng)
+    if "dust" in scen:   # estimator given the true A_V along each orbit
+        res = analyse(M[det], d[det], d[ii, p][det], cfg, mk["n_bootstrap"], rng, A_V=A[det], A_now=A[ii, p][det])
+        res_nodust = analyse(M[det], d[det], d[ii, p][det], cfg, 0, rng)
+    else:
+        res = analyse(M[det], d[det], d[ii, p][det], cfg, mk["n_bootstrap"], rng)
+        res_nodust = None
     # truth: absolute C in each V bin (pseudo-true of the binned model, phase-mixed members) and true counts
-    Vt_all = CV.apparent_mag(M, d)
-    Ct = true_C(M[:, None], d, b, scen, mk["completeness"])
+    Vt_all = CV.apparent_mag(M, d, A)
+    Ct = true_C(Meff, d, b, scen, mk["completeness"])
     th_star = PL.pseudo_true(Vt_all[mixed], Ct[mixed], res["edges"])
     C_star = np.r_[1.0, np.exp(th_star)]
     # pseudo-true values are relative to bin 0; true absolute C in bin 0 (time-averaged over true samples)
@@ -146,7 +185,15 @@ def mock_one(args):
                N_corr_p16=float(np.percentile(bt, 16)), N_corr_p84=float(np.percentile(bt, 84)),
                N_corr_faint_p16=float(np.percentile(bf, 16)), N_corr_faint_p84=float(np.percentile(bf, 84)),
                N_true_faint=int((M > -6.5).sum()), N_corr_faint=float(res["w"][M[det] > -6.5].sum()),
-               N_obs_faint=int((M[det] > -6.5).sum()), dAIC_cv_minus_free=res["aic_cv"] - res["aic_free"], C0_abs=C0_abs)
+               N_obs_faint=int((M[det] > -6.5).sum()), dAIC_cv_minus_free=res["aic_cv"] - res["aic_free"], C0_abs=C0_abs,
+               N_corr_ignoring_dust=float(res_nodust["w"].sum()) if res_nodust is not None else np.nan,
+               N_corr_faint_ignoring_dust=float(res_nodust["w"][M[det] > -6.5].sum()) if res_nodust is not None else np.nan,
+               dAIC_dust_minus_nodust=(2 * res["k_cv"] - 2 * res["ll_cv"]) - (2 * res_nodust["k_cv"] - 2 * res_nodust["ll_cv"])
+               if res_nodust is not None else np.nan,
+               **{f"N_corr_sep_{k}": float(v["w"].sum()) for k, v in sep.items()},
+               **{f"N_corr_faint_sep_{k}": float(v["w"][M[det] > -6.5].sum()) for k, v in sep.items()},
+               **{f"dAIC_sep_{k}_minus_cv": v["aic"] - (2 * res_nodust["k_cv"] - 2 * res_nodust["ll_cv"]
+                                                      if res_nodust is not None else res["aic_cv"]) for k, v in sep.items()})
     mv = [dict(scenario=sname, real=r, mv_lo=MV_EDGES[k], true=tc[k], obs=oc[k], corr=cc[k],
                corr_p16=np.percentile(cb[:, k], 16), corr_p84=np.percentile(cb[:, k], 84)) for k in range(len(tc))]
     return rows, tot, mv
@@ -180,6 +227,15 @@ def run_mock(cfg, out, plots, workers):
                                     C0_abs=("C0_abs", "median"),
                                     frac_dAIC_favours_free=("dAIC_cv_minus_free", lambda x: (x > 2).mean())).reset_index()
     s2["faint_obs_frac"] = Tt.groupby("scenario").N_obs_faint.sum().values / Tt.groupby("scenario").N_true_faint.sum().values
+    s2["tot_ratio_ignoring_dust"] = Tt.groupby("scenario").apply(lambda g: np.median(g.N_corr_ignoring_dust / g.N_true)).values
+    s2["faint_ratio_ignoring_dust"] = Tt.groupby("scenario").apply(lambda g: np.median(g.N_corr_faint_ignoring_dust / g.N_true_faint)).values
+    for k in ("absb", "sightline"):
+        if f"N_corr_sep_{k}" in Tt:
+            s2[f"tot_ratio_sep_{k}"] = Tt.groupby("scenario").apply(lambda g: np.median(g[f"N_corr_sep_{k}"] / g.N_true)).values
+            s2[f"faint_ratio_sep_{k}"] = Tt.groupby("scenario").apply(lambda g: np.median(g[f"N_corr_faint_sep_{k}"] / g.N_true_faint)).values
+            s2[f"frac_AIC_prefers_sep_{k}"] = Tt.groupby("scenario").apply(lambda g: np.mean(g[f"dAIC_sep_{k}_minus_cv"] < 0)).values
+    s2["frac_AIC_prefers_true_dust"] = Tt.groupby("scenario").apply(lambda g: np.mean(g.dAIC_dust_minus_nodust < 0)
+                                                                     if g.dAIC_dust_minus_nodust.notna().any() else np.nan).values
     s1.to_csv(out / "mock_cv_summary_C.csv", index=False); s2.to_csv(out / "mock_cv_summary_totals.csv", index=False)
     with pd.option_context("display.width", 220):
         print(s1.round(3).to_string(index=False)); print(s2.round(3).to_string(index=False))
@@ -225,10 +281,18 @@ def run_real(cfg, out, plots):
         if not np.all(np.isfinite(ebv)):
             raise ValueError("E(B-V) missing for some clusters")
         A_V = cfg.get("R_V", 3.1) * ebv
+    elif ext in ("map_low", "map_high"):   # A_V from 3D/2D dust maps at every orbit sample
+        l_t, b_t, _ = GalactocentricToGalactic(_W["frame"])(lib.xyz)
+        dz = DU.orbit_extinction(l_t, b_t, d_t, cfg["cache_dir"],
+                                 tag=f"{potential_label(base['potential'])}|{lib.xyz.shape}|{float(lib.xyz.sum()):.6e}")
+        A_V = dz["A_low"] if ext == "map_low" else dz["A_high"]   # (N, T); column 0 = present position
     else:
         A_V = np.zeros(len(c))
     rng = np.random.default_rng(cfg["seed"] + 3)
-    res = analyse(M, d_t, d_now, cfg, cfg["n_bootstrap"], rng, A_V=A_V)
+    if np.ndim(A_V) == 2:
+        res = analyse_A(M, d_t, d_now, cfg, cfg["n_bootstrap"], rng, A_V)
+    else:
+        res = analyse(M, d_t, d_now, cfg, cfg["n_bootstrap"], rng, A_V=A_V)
     e, f = res["edges"], res["fit"]
     tab = pd.DataFrame(dict(V_lo=e[:-1], V_hi=e[1:], N_obs=np.bincount(f["kn"], minlength=len(e) - 1),
                             C=f["C"], C_lo=f["lo"], C_hi=f["hi"], at_bound=f["at_bound"]))
@@ -241,8 +305,26 @@ def run_real(cfg, out, plots):
             "faint_corr_p16": float(np.percentile(bf, 16)), "faint_corr_p84": float(np.percentile(bf, 84)),
             "lnL_CV": res["ll_cv"], "k_CV": res["k_cv"], "lnL_free_classC(d)": res["ll_free"], "k_free": res["k_free"],
             "AIC_CV": res["aic_cv"], "AIC_free": res["aic_free"], "anchor": "brightest-V bin complete (C=1)"}
+    # obscuration proxies: C = C_V(V) * g(x), x = -|b| or 2D SFD E(B-V) along the orbit (no extinction in V)
+    if ext == "none" and cfg.get("proxy_tests_real", True):
+        l_t, b_t, _ = GalactocentricToGalactic(_W["frame"])(lib.xyz)
+        sfd_t = DU.query_maps(l_t.ravel(), b_t.ravel(), d_t.ravel(), maps=("sfd",))["sfd"].reshape(d_t.shape) / DU.AV_PER_EBV_SFD
+        proxies = {"absb": -np.abs(b_t), "ebv_sfd": sfd_t}
+        summ["proxies"] = {}
+        for name, xt in proxies.items():
+            r = analyse_sep(M, d_t, d_now, xt, xt[:, 0], cfg, cfg["n_bootstrap"], np.random.default_rng(cfg["seed"] + 9))
+            bt = np.array([w.sum() for w in r["boot_w"]])
+            bf = np.array([w[M[idx] > -6.5].sum() for idx, w in zip(r["boot_idx"], r["boot_w"])])
+            summ["proxies"][name] = {"AIC": r["aic"], "C_V": r["fit"]["C_V"].tolist(), "g": r["fit"]["g"].tolist(),
+                                     "x_edges": r["ex"].tolist(), "N_corr": float(r["w"].sum()),
+                                     "N_corr_p16": float(np.percentile(bt, 16)), "N_corr_p84": float(np.percentile(bt, 84)),
+                                     "faint_corr": float(r["w"][M > -6.5].sum()),
+                                     "faint_corr_p16": float(np.percentile(bf, 16)), "faint_corr_p84": float(np.percentile(bf, 84))}
+            print(f"[real] proxy {name}: AIC {r['aic']:.1f}  g={np.round(r['fit']['g'], 2)}  N_corr {r['w'].sum():.0f} "
+                  f"[{np.percentile(bt, 16):.0f}-{np.percentile(bt, 84):.0f}]  faint {r['w'][M > -6.5].sum():.0f}")
     json.dump(summ, open(out / f"real_cv_summary{tag}.json", "w"), indent=2)
-    pd.DataFrame({"name": c["name"], "M_V": M, "feh": feh, "d": d_now, "A_V": A_V, "V_now": res["V_now"], "q": res["q"],
+    pd.DataFrame({"name": c["name"], "M_V": M, "feh": feh, "d": d_now,
+                  "A_V_now": A_V[:, 0] if np.ndim(A_V) == 2 else A_V, "V_now": res["V_now"], "q": res["q"],
                   "w": res["w"]}).to_csv(out / f"real_cv_weights{tag}.csv", index=False)
     with pd.option_context("display.width", 200):
         print(tab.round(3).to_string(index=False)); print(json.dumps(summ, indent=1))
@@ -254,7 +336,9 @@ def run_real(cfg, out, plots):
     for _, r in tab.iterrows():
         axes[0].text(vc[_], 0.012, f"{r.N_obs}", ha="center", fontsize=7, color=MUTED)
     axes[0].set_yscale("log"); axes[0].set_ylim(0.01, 3); axes[0].axhline(1, color=MUTED)
-    axes[0].set_xlabel("apparent V" + (" (no extinction)" if ext == "none" else " incl. A_V = 3.1 E(B-V)_present")); axes[0].set_ylabel("C(V) (brightest bin = 1)")
+    axes[0].set_xlabel("apparent V" + {"none": " (no extinction)", "present_ebv": " incl. A_V = 3.1 E(B-V)_present",
+                                       "map_low": " incl. map A_V (low bracket)",
+                                       "map_high": " incl. map A_V (high bracket)"}[ext]); axes[0].set_ylabel("C(V) (brightest bin = 1)")
     axes[0].set_title(f"C(V); ΔAIC(C(V) − free per-class C(d)) = {res['aic_cv'] - res['aic_free']:+.1f}", fontsize=8, loc="left")
     for j, cu in enumerate(res["curves"]):
         ax = axes[j + 1]
@@ -293,7 +377,9 @@ def run_real(cfg, out, plots):
             if col == 0:
                 a.invert_xaxis()
     fig.suptitle("Observed vs completeness-corrected GCs with C(V) (phase likelihood, all clusters; anchor: brightest-V bin "
-                 "complete; " + ("no extinction" if ext == "none" else "A_V = 3.1 E(B-V) at present position") + ")",
+                 "complete; " + {"none": "no extinction", "present_ebv": "A_V = 3.1 E(B-V) at present position",
+                                 "map_low": "map A_V along orbits, low bracket",
+                                 "map_high": "map A_V along orbits, high bracket"}[ext] + ")",
                  fontsize=9.5, x=0.01, ha="left")
     fig.savefig(plots / f"fig62_cv_corrected_MV_FeH{tag}.png", bbox_inches="tight"); plt.close(fig)
 
@@ -305,7 +391,7 @@ def main():
     ap.add_argument("--n-real", type=int, default=None)
     ap.add_argument("--n-boot", type=int, default=None)
     ap.add_argument("--workers", type=int, default=8)
-    ap.add_argument("--extinction", choices=["none", "present_ebv"], default=None)
+    ap.add_argument("--extinction", choices=["none", "present_ebv", "map_low", "map_high"], default=None)
     a = ap.parse_args()
     cfg = yaml.safe_load(open(a.config))
     if a.n_real:

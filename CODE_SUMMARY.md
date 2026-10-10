@@ -227,6 +227,53 @@ phase likelihood stays below 1.
 |---|---|---|---|---|---|---|---|---|
 | C | 1 (anchor) | 1.17 | 0.56 | 0.64 | 0.41 | 0.25 | 0.21 | 0.14 [0.07–0.30] |
 
-- **Corrected totals:** 483 GCs [68%: 335–760] from 165 observed; faint (M_V > −6.5) 267
-  [166–478] from 55 observed.
+- **Corrected totals:** 483 GCs [68%: 335–765] from 165 observed; faint (M_V > −6.5) 267
+  [168–473] from 55 observed (cluster bootstrap after the fix that resamples, refits and counts
+  the same clusters).
 - **Model comparison:** AIC(C(V)) = −6.0 against −1.5 for the free per-class C(d) fits.
+
+## Extinction (`dust.py`, `run_cv.py --extinction ...`, `configs/dustmapsrc.json`)
+
+### Method
+
+- **3D maps along orbits** (`--extinction map_low|map_high`). A_V is evaluated at every one of the 165×500
+  orbit samples with `dustmaps`; map data live in `~/data/dustmaps`, selected through
+  `configs/dustmapsrc.json`. Maps by priority:
+  - DECaPS 3D mean (Zucker+2025; 239° < l < 6°, |b| < 10°, d ≤ 10 kpc), A_V = 3.1 E(B−V);
+  - Bayestar19 (where flagged reliable), A_V = 3.1 × 0.883 × value;
+  - Marshall+2006 (within each sightline's last distance slice), A_V = 8.8 A_Ks;
+  - SFD, A_V = 2.742 E(B−V)_SFD.
+- **Brackets.** Beyond a map's reliable reach, the LOW bracket uses the last 3D value and the HIGH
+  bracket the SFD total of the sightline. Results are cached in `outputs/cache/dust_<hash>.npz`.
+- **Source fractions over orbit samples:** DECaPS 24%, Marshall 13%, Bayestar19 8%, SFD/bracket 55%.
+  At present positions the maps give 5–8% less A_V than 3.1 E(B−V)_catalogue (median ratio 0.92
+  for LOW, 0.95 for HIGH, over 144 clusters with catalogue A_V > 0.1).
+- **Present reddening held fixed** (`--extinction present_ebv`): a test only, since it is unphysical.
+- **Proxies** (`cv.fit_cv_sep`): C = C_V(V)·g(x), with x = −|b| or the 2D SFD E(B−V) at each orbit
+  sample, in 3 equal-count x bins, the least obscured anchored to 1. They are fitted on the real data
+  (stored in `real_cv_summary.json`) and on mocks (`proxy_tests: true`). Mock scenario E is an
+  exponential dust disc (`dust.disc_extinction`, a0 = 1 mag/kpc, h_R = 3 kpc, h_z = 0.1 kpc).
+
+### Mocks (corrected total / true, median of 100; faint in brackets)
+
+| Scenario | C(V) | C_V·g(\|b\|) | C_V·g(2D column) | AIC prefers proxy |
+|---|---|---|---|---|
+| A | 0.80 (0.44) | 0.83 (0.43) | 0.82 (0.41) | 15% / 12% |
+| B | 0.56 (0.27) | 0.64 (0.31) | 0.65 (0.31) | 30% / 30% |
+| E, dust ignored | 0.51 (0.16) | 0.68 (0.19) | 0.69 (0.19) | 69% / 71% |
+| E, true A_V supplied | 0.61 (0.18) | – | – | true dust preferred in 98% |
+
+### Real data
+
+| Model | AIC | Corrected total [68%] | Faint (M_V > −6.5) |
+|---|---|---|---|
+| No extinction | −6.0 | 483 [335–765] | 267 [168–473] |
+| Present E(B−V) fixed | +1.3 | 689 [457–1172] | 337 [203–651] |
+| Proxy g(SFD), g = [1, 1.26, 0.75] | −7.5 | 462 [346–668] | 251 [169–403] |
+| Proxy g(\|b\|), g = [1, 0.94, 0.49] | −10.4 | 520 [400–753] | 269 [184–432] |
+| 3D maps, LOW | −13.7 | 455 [354–634] | 218 [158–327] |
+| 3D maps, HIGH (best) | −14.4 | 411 [319–566] | 197 [140–291] |
+
+- **Correction factor by metallicity with maps:** [Fe/H] < −1 goes from ×3.1 to ×2.4, while
+  [Fe/H] ≥ −1 stays at ×2.6.
+- **Figure:** `plots/paper_corrected_map_high.png`.
