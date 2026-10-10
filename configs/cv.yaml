@@ -28,3 +28,6 @@ mock:
     C_sgr_clump: {clump: {n: 15, xyz: [17.5, 2.5, -6.5], vxyz: [237.9, -24.3, 209.0], sig_x: 1.0, sig_v: 10.0}}
     D_not_V: {not_V: {V0: 4.0, slope: 0.6}}   # C depends on M_V and d but not through V alone
     E_dust: {dust: {a0: 1.0, h_R: 3.0, h_z: 0.1}}   # true C(V + A_V), A_V from an exponential dust disc
+    F_two_survey: {C_shape: two_survey}         # C(V) = 0.8 logistic(8, 0.3) + 0.2 logistic(13, 0.3)
+    G_power_tail: {C_shape: power_tail}         # C(V) = 1 for V < 7, (1 + V - 7)^-2 beyond
+vmax_M_ref: -8.0             # 1/V_max orbit population: clusters with M_V < vmax_M_ref

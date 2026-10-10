@@ -31,6 +31,7 @@ python scripts/run_adaptive.py --mode real     # adaptive bins + symmetry, real 
 python scripts/run_cv.py --mode mock           # C(V) phase likelihood, mocks    -> outputs/cv/, plots/fig60
 python scripts/run_cv.py --mode real [--extinction present_ebv|map_low|map_high]   # C(V), real -> outputs/cv/, plots/fig61-62
 python scripts/make_paper_figures.py           # print-size figures for writeup/ -> plots/paper_*.png
+python scripts/make_paper_figures.py --vmax map_high   # only the 1/V_max corrected-distribution figure
 ```
 
 Write-up: `writeup/gc_completeness.tex` (compiled PDF alongside).

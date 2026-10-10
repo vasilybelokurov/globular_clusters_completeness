@@ -235,3 +235,60 @@ def test_separable_cv_recovers_both_factors():
     assert np.allclose(f["C_V"], CVt / CVt[0], atol=0.08)
     # over 10 seeds: g biased high by ~5% (0.70 vs 0.67, 1.18 vs 1.11), per-realisation sd 0.05-0.09
     assert np.allclose(f["g"], gt / gt[0], atol=0.2)
+
+
+def test_spline_basis_matches_direct_and_tail_extrapolates():
+    from gc_completeness import cv as CV
+    nodes = np.array([6.0, 7.0, 8.5, 10.0])
+    p = np.array([-0.3, -1.0, -0.8])                     # t = [0, -0.3, -1.0, -1.8]
+    V = np.linspace(4, 14, 101)
+    assert np.allclose(CV.spline_basis(V, nodes) @ p, CV.lnC_spline(V, nodes, p))
+    assert np.allclose(CV.lnC_spline([5.0, 6.0, 10.0], nodes, p), [0.0, 0.0, -1.8])
+    slope = -0.8 / 1.5
+    assert np.isclose(CV.lnC_spline(12.0, nodes, p), -1.8 + 2.0 * slope)
+
+
+def test_spline_gradient_matches_finite_differences():
+    from scipy.optimize import check_grad
+    from gc_completeness import cv as CV
+    rng = np.random.default_rng(1)
+    nodes = np.array([6.0, 7.0, 8.5, 10.0])
+    V_t = rng.uniform(4, 15, (30, 50)); V_now = V_t[:, 0]
+    B_t, B_now = CV.spline_basis(V_t, nodes), CV.spline_basis(V_now, nodes)
+    import scipy.optimize as so
+    captured = {}
+    orig = so.minimize
+    def spy(fun, x0, **kw):
+        captured["f"] = fun
+        return orig(fun, x0, **kw)
+    so.minimize = spy
+    try:
+        CV.fit_cv_spline(B_t, B_now)
+    finally:
+        so.minimize = orig
+    f = captured["f"]
+    for p in (np.zeros(3), np.array([-0.5, -1.2, -0.4])):
+        assert check_grad(lambda x: f(x)[0], lambda x: f(x)[1], p) < 1e-4
+
+
+def test_spline_vmax_recovers_total_with_never_detectable_orbits():
+    """Toy: distances on fixed 'orbits' (uniform in DM range), C logistic in V; faint clusters on far
+    orbits are never detected. 1/V_max with the fitted spline C should recover the total within 20%."""
+    from gc_completeness import cv as CV
+    rng = np.random.default_rng(3)
+    N, T = 3000, 200
+    DM0 = rng.uniform(12, 20, N)                          # orbit 'centre' distance modulus
+    DM = DM0[:, None] + rng.uniform(-1.5, 1.5, (N, T))    # phase variation along the orbit
+    M = rng.normal(-7.4, 1.2, N)
+    V_t = M[:, None] + DM
+    C = lambda V: 1 / (1 + np.exp((V - 9.0) / 0.5))
+    p = rng.integers(0, T, N); ii = np.arange(N)
+    det = rng.random(N) < C(V_t[ii, p])
+    Vt, Vn, Md = V_t[det], V_t[ii, p][det], M[det]
+    nodes = CV.spline_nodes(Vn, 40)
+    fit = CV.fit_cv_spline(CV.spline_basis(Vt, nodes), CV.spline_basis(Vn, nodes))
+    q = np.exp(CV.spline_basis(Vt, nodes) @ fit["p"]).mean(1)
+    pop = Md < -8
+    fM = CV.population_detectability(Md, (Vt - Md[:, None])[pop], 1 / q[pop],
+                                     lambda V: np.exp(CV.lnC_spline(V, nodes, fit["p"])))
+    assert abs((1 / fM).sum() / N - 1) < 0.2

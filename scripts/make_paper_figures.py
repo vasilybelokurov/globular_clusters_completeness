@@ -312,7 +312,55 @@ def fig_corrected(cfg, c, d_t, ext, lib=None):
     save(fig, f"paper_corrected{tag}.png")
 
 
+def fig_corrected_vmax(ext):
+    """Corrected M_V and [Fe/H] with the continuous C(V): 1/V_max (band: 68% bootstrap) and own-orbit 1/q;
+    for [Fe/H] the 1/V_max orbit population is the bright clusters of the same class ([Fe/H] < -1 or >= -1),
+    read from the saved run_cv.py outputs (real_cv_weights{tag}.csv, real_cv_boot{tag}.npz)."""
+    tag = "" if ext == "none" else f"_{ext}"
+    t = pd.read_csv(CVD / f"real_cv_weights{tag}.csv")
+    z = np.load(CVD / f"real_cv_boot{tag}.npz")
+    M, feh = t.M_V.values, t.feh.values
+    fig = plt.figure(figsize=(W, 3.6))
+    gs = fig.add_gridspec(2, 2, height_ratios=[2.2, 1], hspace=0.08, wspace=0.28)
+    for col, (x, e, lab) in enumerate([(M, MV_EDGES, r"$M_V$ [mag]"), (feh, np.arange(-2.6, 0.21, 0.2), "[Fe/H]")]):
+        ok = np.isfinite(x)
+        wv, bidx, bwv = ((t.w_vmax.values, z["boot_idx_spline"], z["boot_w_vmax"]) if col == 0 else
+                         (t.w_vmax_fehsplit.values, z["boot_idx_fehsplit"], z["boot_w_vmax_fehsplit"]))
+        ax, axr = fig.add_subplot(gs[0, col]), fig.add_subplot(gs[1, col])
+        obs = np.histogram(x[ok], e)[0]
+        hv = np.histogram(x[ok], e, weights=wv[ok])[0]
+        hq = np.histogram(x[ok], e, weights=t.w_spline.values[ok])[0]
+        hbb = []
+        for idx, wb in zip(bidx, bwv):
+            xx = x[idx]; o = np.isfinite(xx) & np.isfinite(wb)
+            hbb.append(np.histogram(xx[o], e, weights=wb[o])[0])
+        lo, hi = np.percentile(hbb, 16, 0), np.percentile(hbb, 84, 0)
+        ax.fill_between(e, np.r_[lo, lo[-1]], np.r_[hi, hi[-1]], step="post", color=C[1], alpha=0.25, lw=0)
+        ax.stairs(hv, e, color=C[1], lw=1.6, label=f"corrected, $1/V_{{\\rm max}}$" + (" (per class)" if col else "") + f" ({hv.sum():.0f})")
+        ax.stairs(hq, e, color=C[2], lw=1.2, ls="--", label=f"corrected, own orbit $1/q$ ({hq.sum():.0f})")
+        ax.errorbar(0.5 * (e[1:] + e[:-1]), obs, yerr=np.sqrt(obs), fmt="none", ecolor=INK, lw=0.8)
+        ax.stairs(obs, e, color=INK, lw=1.4, label=f"observed ({obs.sum()})")
+        ax.set_ylim(0, 1.5 * max(hi.max(), hq.max())); ax.tick_params(labelbottom=False); ax.legend(loc="upper left")
+        ax.set_ylabel("GCs per bin"); ax.set_title(f"({'ab'[col]})", loc="left")
+        okb = obs >= 2
+        with np.errstate(divide="ignore", invalid="ignore"):
+            axr.stairs(np.where(okb, hv / obs, np.nan), e, color=C[1], lw=1.6)
+            axr.stairs(np.where(okb, hq / obs, np.nan), e, color=C[2], lw=1.2, ls="--")
+            axr.fill_between(e, np.r_[np.where(okb, lo / obs, np.nan), np.nan], np.r_[np.where(okb, hi / obs, np.nan), np.nan],
+                             step="post", color=C[1], alpha=0.25, lw=0)
+        axr.axhline(1, color=MUTED, lw=0.8); axr.set_ylim(0, 12 if col == 0 else 7); axr.set_xlabel(lab)
+        axr.set_ylabel("corr./obs.")
+        for a in (ax, axr):
+            a.set_xlim(e[0], e[-1])
+            if col == 0:
+                a.set_xlim(-1.5, -11)
+    save(fig, f"paper_corrected_vmax{tag}.png")
+
+
 def main():
+    if len(sys.argv) > 2 and sys.argv[1] == "--vmax":   # single figure from saved outputs
+        fig_corrected_vmax(sys.argv[2])
+        return
     fig_mock_classes()
     fig_mock_cv()
     fig_real_classes()
@@ -323,6 +371,7 @@ def main():
     fig_corrected(cfg, c, d_t, "none")
     fig_corrected(cfg, c, d_t, "present_ebv")
     fig_corrected(cfg, c, d_t, "map_high", lib)
+    fig_corrected_vmax("map_high")
 
 
 if __name__ == "__main__":

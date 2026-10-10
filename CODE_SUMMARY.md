@@ -277,3 +277,63 @@ phase likelihood stays below 1.
 - **Correction factor by metallicity with maps:** [Fe/H] < −1 goes from ×3.1 to ×2.4, while
   [Fe/H] ≥ −1 stays at ×2.6.
 - **Figure:** `plots/paper_corrected_map_high.png`.
+
+## Never-detectable orbits: continuous C(V) and 1/V_max (`cv.fit_cv_spline`, `cv.population_detectability`, `run_cv.analyse_spline`)
+
+### Diagnosis (scenario A mocks)
+
+| Estimator | Total / true | Faint / true |
+|---|---|---|
+| 1/q, true C | 0.87 | 0.63 |
+| 1/q, fitted binned C | 0.84 | 0.41 |
+| 1/q, best binned C (pseudo-true) | 0.70 | 0.36 |
+| 1/V_max, true C, ideal orbit population | 1.005 | 0.79 |
+
+- The shortfall has two causes. Clusters with q ≈ 0 drop out of the own-orbit sum. On top of that,
+  the open last V bin holds C constant at faint V, which inflates q for faint clusters.
+- Medians: 8 realisations for the 1/q rows and the ideal 1/V_max row, 10 for the pseudo-true row.
+
+### Method
+
+- **Continuous C(V).** ln C is piecewise linear in V, with nodes at the median observed V of the same
+  8 equal-count bins. Node 0 is the anchor (C = 1), flat at brighter V. Beyond the last node the last
+  slope continues, constrained to be ≤ 0. 7 parameters, same phase likelihood, analytic gradient.
+- **1/V_max.** f(M) = Σ_j q_j⁻¹ ⟨C(M + μ_j(t))⟩_t / Σ_j q_j⁻¹ over clusters with M_V < −8
+  (`vmax_M_ref`), where μ = DM + A_V along the orbit. Each cluster gets weight 1/f(M_i).
+  - Assumption: orbits do not depend on M_V.
+  - Per-[Fe/H]-class variant: each class uses its own bright clusters as the population (31 metal-poor, 9 metal-rich).
+- `vmax_weights` applies 1/V_max with the binned C, kept for comparison; it does not help (the binned tail problem).
+
+### Mocks (100 realisations; corrected / true, faint in brackets)
+
+| Scenario | Binned 1/q | Continuous 1/q | Continuous 1/V_max | 1/V_max 68% coverage (total) |
+|---|---|---|---|---|
+| A | 0.80 (0.44) | 1.00 (0.83) | 1.01 (0.95) | 0.70 |
+| B latitude | 0.56 (0.27) | 0.74 (0.52) | 0.73 (0.65) | 0.53 |
+| C Sgr clump | 0.71 (0.42) | 0.96 (0.76) | 1.06 (1.03) | 0.58 |
+| D not V | 0.87 (0.73) | 0.88 (0.72) | 0.89 (0.81) | 0.63 |
+| E dust (true A_V) | 0.61 (0.18) | 0.85 (0.50) | 0.95 (0.68) | 0.60 |
+| F two surveys | 0.94 (0.79) | 1.12 (1.05) | 1.13 (0.98) | 0.65 |
+| G power-law tail | 0.75 (0.39) | 1.04 (0.92) | 0.91 (0.80) | 0.68 |
+
+- **Scatter:** 16–84% of the total ratio across realisations is 0.67–1.55 (A).
+- **AIC:** prefers the continuous model in 55–100% of mocks.
+
+### Real data (68% bootstrap)
+
+| | No extinction | Maps, low | Maps, high |
+|---|---|---|---|
+| AIC continuous (binned) | −6.9 (−6.0) | −23.7 (−13.7) | −22.6 (−14.4) |
+| Total, 1/q | 749 [467–1185] | 461 [338–685] | 432 [321–628] |
+| Total, 1/V_max | 563 [348–841] | 418 [293–625] | 393 [274–573] |
+| Faint, 1/q | 527 [270–910] | 224 [149–345] | 208 [137–314] |
+| Faint, 1/V_max | 322 [175–508] | 189 [119–292] | 177 [112–274] |
+| [Fe/H] < −1, 1/V_max per class | 425 [265–645] | 259 [176–346] | 245 [165–327] |
+| [Fe/H] ≥ −1, 1/V_max per class | 119 [75–169] | 175 [102–277] | 160 [94–251] |
+
+- **Shared-orbit check.** The faint ratio (1/V_max)/(1/q) is 0.85 on real data with maps and 0.61
+  without; its mock median is 1.0–1.4. In mocks satisfying the assumption, P(< 0.85) = 4–37% and
+  P(< 0.61) = 3–19%: not a rejection. The direction suggests faint GCs are on more extended orbits.
+- **Outputs:** `outputs/cv/real_cv_summary*.json` (key `spline`); per-cluster weights in
+  `real_cv_weights*.csv` (`w_spline`, `w_vmax`, `w_vmax_fehsplit`); bootstrap in `real_cv_boot*.npz`.
+  Figure: `plots/paper_corrected_vmax_map_high.png` (`python scripts/make_paper_figures.py --vmax map_high`).

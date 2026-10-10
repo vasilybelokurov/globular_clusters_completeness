@@ -98,15 +98,70 @@ def analyse(M, d_t, d_now, cfg, n_boot, rng, A_V=0.0, A_now=None):
     q = CV.cluster_q(V_t, e, f["C"])
     llf, kf, curves = per_class_free_ll(M, d_t, d_now, cfg["n_classes"], cfg["n_min_d"], cfg["d_hi"])
     aic_cv, aic_free = 2 * f["n_par"] - 2 * f["ll"], 2 * kf - 2 * llf
-    boot_idx, boot_w = [], []
+    boot_idx, boot_w, boot_C = [], [], []
     N = len(M)
     for _ in range(n_boot):   # cluster bootstrap: resample clusters, refit C(V) (fixed V edges), and
         idx = rng.integers(0, N, N)            # weight the RESAMPLED clusters with the refitted C
         fb = CV.fit_cv(V_t[idx], V_now[idx], e, profile=False)
-        boot_idx.append(idx); boot_w.append(1.0 / CV.cluster_q(V_t[idx], e, fb["C"]))
-    return dict(V_t=V_t, V_now=V_now, edges=e, fit=f, q=q, w=1.0 / q,
+        boot_idx.append(idx); boot_w.append(1.0 / CV.cluster_q(V_t[idx], e, fb["C"])); boot_C.append(fb["C"])
+    return dict(M=np.asarray(M, float), V_t=V_t, V_now=V_now, edges=e, fit=f, q=q, w=1.0 / q,
                 boot_idx=np.array(boot_idx, int).reshape(n_boot, N), boot_w=np.array(boot_w).reshape(n_boot, N),
+                boot_C=np.array(boot_C).reshape(n_boot, len(e) - 1),
                 aic_cv=aic_cv, aic_free=aic_free, ll_cv=f["ll"], ll_free=llf, k_cv=f["n_par"], k_free=kf, curves=curves)
+
+
+def vmax_weights(res, M_ref=-8.0):
+    """Never-detectable-orbit correction (1/V_max style) with the BINNED C(V) of an analyse() result.
+
+    Orbit population = clusters with M_V < M_ref, weighted 1/q_j; each observed cluster i gets weight
+    1/f(M_i) (CV.population_detectability). Assumes orbits independent of M_V. Kept for comparison:
+    the binned C is constant beyond the last V bin, which inflates f at faint M (see analyse_spline)."""
+    M, e = res["M"], res["edges"]
+    mu = res["V_t"] - M[:, None]                       # DM + A_V along each orbit
+    pop = M < M_ref
+    Cf = lambda C: (lambda V: np.asarray(C)[PL.bin_index(V, e)])
+    w = 1.0 / CV.population_detectability(M, mu[pop], res["w"][pop], Cf(res["fit"]["C"]))
+    bw = []
+    for idx, Cb, wb in zip(res["boot_idx"], res["boot_C"], res["boot_w"]):
+        pb = M[idx] < M_ref
+        bw.append(1.0 / CV.population_detectability(M[idx], mu[idx][pb], wb[pb], Cf(Cb)))
+    return dict(w=w, boot_idx=res["boot_idx"], boot_w=np.array(bw).reshape(res["boot_w"].shape), n_pop=int(pop.sum()))
+
+
+def analyse_spline(M, V_t, V_now, cfg, n_boot, rng, M_ref=-8.0, groups=None):
+    """Continuous C(V) (CV.fit_cv_spline) with two corrected-count estimators:
+    w_ht = 1/q_i (own orbit) and w = 1/f(M_i) (1/V_max over the orbit population of clusters with
+    M_V < M_ref; corrects for faint clusters on orbits that never enter the detectable volume).
+    groups (optional, per cluster): 1/V_max uses as orbit population only the bright clusters of the
+    same group (e.g. metallicity class), i.e. orbits independent of M_V within each group.
+    Cluster bootstrap: resample, refit, re-select the population, recompute both weights."""
+    M = np.asarray(M, float)
+    nodes = CV.spline_nodes(V_now, cfg["n_min_v"])
+    B_t, B_now = CV.spline_basis(V_t, nodes), CV.spline_basis(V_now, nodes)
+    mu = V_t - M[:, None]
+
+    def one(idx, p0=None):
+        f = CV.fit_cv_spline(B_t[idx], B_now[idx], p0)
+        q = np.exp(B_t[idx] @ f["p"]).mean(1)
+        Cfun = lambda V: np.exp(CV.lnC_spline(V, nodes, f["p"]))
+        g = np.zeros(len(idx), int) if groups is None else np.asarray(groups)[idx]
+        fM = np.full(len(idx), np.nan)
+        for gv in np.unique(g):
+            ing = g == gv
+            pop = ing & (M[idx] < M_ref)
+            if pop.any():
+                fM[ing] = CV.population_detectability(M[idx][ing], mu[idx][pop], 1.0 / q[pop], Cfun)
+        return f, 1.0 / q, 1.0 / fM
+    N = len(M)
+    f, w_ht, w = one(np.arange(N))
+    bi, bw, bh = [], [], []
+    for _ in range(n_boot):
+        idx = rng.integers(0, N, N)
+        _, h, v = one(idx, f["p"])
+        bi.append(idx); bh.append(h); bw.append(v)
+    sh = (n_boot, N)
+    return dict(nodes=nodes, fit=f, w=w, w_ht=w_ht, aic=2 * f["n_par"] - 2 * f["ll"], n_pop=int((M < M_ref).sum()),
+                boot_idx=np.array(bi, int).reshape(sh), boot_w=np.array(bw).reshape(sh), boot_w_ht=np.array(bh).reshape(sh))
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +179,16 @@ def true_C(M, d, b, scen, mc):
         Cv = 1.0 / (1.0 + np.exp((M - (scen["not_V"]["V0"] - scen["not_V"]["slope"] * DM)) / mc["dM"]))
     else:
         Cv = 1.0 / (1.0 + np.exp((M - (mc["V_lim"] - DM)) / mc["dM"]))
+    if scen.get("C_shape"):   # true C(V) with a tail that is not log-linear (tests the spline extrapolation)
+        V = M + DM
+        lg = lambda V0, w: 1.0 / (1.0 + np.exp((V - V0) / w))
+        sh = scen["C_shape"]
+        if sh == "two_survey":     # shallow all-sky survey + deep partial-area survey
+            Cv = 0.8 * lg(8.0, 0.3) + 0.2 * lg(13.0, 0.3)
+        elif sh == "power_tail":   # slow power-law decline, no cut-off
+            Cv = np.where(V < 7.0, 1.0, (1.0 + np.maximum(V - 7.0, 0.0)) ** -2.0)
+        else:
+            raise ValueError(sh)
     if "b_term" in scen:
         Cv = Cv * (1 - scen["b_term"]["depth"] * np.exp(-np.abs(b) / scen["b_term"]["b0"]))
     return Cv
@@ -171,8 +236,14 @@ def mock_one(args):
     # pseudo-true values are relative to bin 0; true absolute C in bin 0 (time-averaged over true samples)
     k0 = PL.bin_index(Vt_all[mixed], res["edges"]) == 0
     C0_abs = (Ct[mixed] * k0).sum() / max(k0.sum(), 1)
+    vm = vmax_weights(res, cfg.get("vmax_M_ref", -8.0))           # never-detectable-orbit correction
+    sp = analyse_spline(M[det], res["V_t"], res["V_now"], cfg, mk["n_bootstrap"], rng, cfg.get("vmax_M_ref", -8.0))
+    spht = dict(sp, w=sp["w_ht"], boot_w=sp["boot_w_ht"])
+    vt = boot_sum(M[det], sp); vf = boot_sum(M[det], sp, lambda x: x > -6.5)
+    fM = M[det] > -6.5
     tc = np.histogram(M, MV_EDGES)[0]
     cc = np.histogram(M[det], MV_EDGES, weights=res["w"])[0]
+    cv_ = np.histogram(M[det], MV_EDGES, weights=sp["w"])[0]
     cb = boot_hist(M[det], res, MV_EDGES)
     oc = np.histogram(M[det], MV_EDGES)[0]
     rows = []
@@ -186,6 +257,14 @@ def mock_one(args):
                N_corr_faint_p16=float(np.percentile(bf, 16)), N_corr_faint_p84=float(np.percentile(bf, 84)),
                N_true_faint=int((M > -6.5).sum()), N_corr_faint=float(res["w"][M[det] > -6.5].sum()),
                N_obs_faint=int((M[det] > -6.5).sum()), dAIC_cv_minus_free=res["aic_cv"] - res["aic_free"], C0_abs=C0_abs,
+               N_corr_vmaxbin=float(vm["w"].sum()), N_corr_faint_vmaxbin=float(vm["w"][fM].sum()),
+               N_corr_splht=float(sp["w_ht"].sum()), N_corr_faint_splht=float(sp["w_ht"][fM].sum()),
+               N_corr_vmax=float(sp["w"].sum()), N_corr_faint_vmax=float(sp["w"][fM].sum()),
+               N_corr_vmax_p16=float(np.percentile(vt, 16)) if len(vt) else np.nan,
+               N_corr_vmax_p84=float(np.percentile(vt, 84)) if len(vt) else np.nan,
+               N_corr_faint_vmax_p16=float(np.percentile(vf, 16)) if len(vf) else np.nan,
+               N_corr_faint_vmax_p84=float(np.percentile(vf, 84)) if len(vf) else np.nan,
+               dAIC_spline_minus_bin=sp["aic"] - res["aic_cv"], n_pop_vmax=sp["n_pop"],
                N_corr_ignoring_dust=float(res_nodust["w"].sum()) if res_nodust is not None else np.nan,
                N_corr_faint_ignoring_dust=float(res_nodust["w"][M[det] > -6.5].sum()) if res_nodust is not None else np.nan,
                dAIC_dust_minus_nodust=(2 * res["k_cv"] - 2 * res["ll_cv"]) - (2 * res_nodust["k_cv"] - 2 * res_nodust["ll_cv"])
@@ -194,7 +273,7 @@ def mock_one(args):
                **{f"N_corr_faint_sep_{k}": float(v["w"][M[det] > -6.5].sum()) for k, v in sep.items()},
                **{f"dAIC_sep_{k}_minus_cv": v["aic"] - (2 * res_nodust["k_cv"] - 2 * res_nodust["ll_cv"]
                                                       if res_nodust is not None else res["aic_cv"]) for k, v in sep.items()})
-    mv = [dict(scenario=sname, real=r, mv_lo=MV_EDGES[k], true=tc[k], obs=oc[k], corr=cc[k],
+    mv = [dict(scenario=sname, real=r, mv_lo=MV_EDGES[k], true=tc[k], obs=oc[k], corr=cc[k], corr_vmax=cv_[k],
                corr_p16=np.percentile(cb[:, k], 16), corr_p84=np.percentile(cb[:, k], 84)) for k in range(len(tc))]
     return rows, tot, mv
 
@@ -236,6 +315,16 @@ def run_mock(cfg, out, plots, workers):
             s2[f"frac_AIC_prefers_sep_{k}"] = Tt.groupby("scenario").apply(lambda g: np.mean(g[f"dAIC_sep_{k}_minus_cv"] < 0)).values
     s2["frac_AIC_prefers_true_dust"] = Tt.groupby("scenario").apply(lambda g: np.mean(g.dAIC_dust_minus_nodust < 0)
                                                                      if g.dAIC_dust_minus_nodust.notna().any() else np.nan).values
+    for k in ("vmaxbin", "splht", "vmax"):
+        s2[f"tot_ratio_{k}"] = Tt.groupby("scenario").apply(lambda g: np.median(g[f"N_corr_{k}"] / g.N_true)).values
+        s2[f"faint_ratio_{k}"] = Tt.groupby("scenario").apply(lambda g: np.median(g[f"N_corr_faint_{k}"] / g.N_true_faint)).values
+    s2["tot_coverage68_vmax"] = Tt.groupby("scenario").apply(
+        lambda g: np.mean((g.N_true >= g.N_corr_vmax_p16) & (g.N_true <= g.N_corr_vmax_p84))).values
+    s2["faint_coverage68_vmax"] = Tt.groupby("scenario").apply(
+        lambda g: np.mean((g.N_true_faint >= g.N_corr_faint_vmax_p16) & (g.N_true_faint <= g.N_corr_faint_vmax_p84))).values
+    s2["tot_p16_vmax"] = Tt.groupby("scenario").apply(lambda g: np.percentile(g.N_corr_vmax / g.N_true, 16)).values
+    s2["tot_p84_vmax"] = Tt.groupby("scenario").apply(lambda g: np.percentile(g.N_corr_vmax / g.N_true, 84)).values
+    s2["n_pop_vmax"] = Tt.groupby("scenario").n_pop_vmax.median().values
     s1.to_csv(out / "mock_cv_summary_C.csv", index=False); s2.to_csv(out / "mock_cv_summary_totals.csv", index=False)
     with pd.option_context("display.width", 220):
         print(s1.round(3).to_string(index=False)); print(s2.round(3).to_string(index=False))
@@ -322,10 +411,47 @@ def run_real(cfg, out, plots):
                                      "faint_corr_p16": float(np.percentile(bf, 16)), "faint_corr_p84": float(np.percentile(bf, 84))}
             print(f"[real] proxy {name}: AIC {r['aic']:.1f}  g={np.round(r['fit']['g'], 2)}  N_corr {r['w'].sum():.0f} "
                   f"[{np.percentile(bt, 16):.0f}-{np.percentile(bt, 84):.0f}]  faint {r['w'][M > -6.5].sum():.0f}")
+    # continuous C(V) with extrapolated tail; 1/q (own orbit) and 1/V_max (never-detectable-orbit correction)
+    sp = analyse_spline(M, res["V_t"], res["V_now"], cfg, cfg["n_bootstrap"], np.random.default_rng(cfg["seed"] + 11),
+                        cfg.get("vmax_M_ref", -8.0))
+    spht = dict(sp, w=sp["w_ht"], boot_w=sp["boot_w_ht"])
+    fehc = np.where(np.isfinite(feh), (feh >= -1).astype(int), -1)        # 1/V_max per metallicity class
+    spf = analyse_spline(M, res["V_t"], res["V_now"], cfg, cfg["n_bootstrap"], np.random.default_rng(cfg["seed"] + 13),
+                         cfg.get("vmax_M_ref", -8.0), groups=fehc)
+    for cn, cv_ in (("feh<-1", 0), ("feh>=-1", 1)):
+        ok = fehc == cv_
+        b_ = np.array([np.nansum(w[fehc[idx] == cv_]) for idx, w in zip(spf["boot_idx"], spf["boot_w"])])
+        b2 = np.array([w[fehc[idx] == cv_].sum() for idx, w in zip(sp["boot_idx"], sp["boot_w"])])
+        b3 = np.array([w[fehc[idx] == cv_].sum() for idx, w in zip(sp["boot_idx"], sp["boot_w_ht"])])
+        summ.setdefault("spline", {})
+        summ["spline"][f"vmax_split_{cn}"] = [float(spf["w"][ok].sum()), float(np.percentile(b_, 16)), float(np.percentile(b_, 84))]
+        summ["spline"][f"vmax_{cn}"] = [float(sp["w"][ok].sum()), float(np.percentile(b2, 16)), float(np.percentile(b2, 84))]
+        summ["spline"][f"ht_{cn}"] = [float(sp["w_ht"][ok].sum()), float(np.percentile(b3, 16)), float(np.percentile(b3, 84))]
+        summ["spline"][f"n_pop_{cn}"] = int((ok & (M < cfg.get("vmax_M_ref", -8.0))).sum())
+        print(f"[real] {cn}: obs {ok.sum()}  1/q {summ['spline'][f'ht_{cn}'][0]:.0f}  1/V_max(all pop) {summ['spline'][f'vmax_{cn}'][0]:.0f}"
+              f"  1/V_max(own class pop) {summ['spline'][f'vmax_split_{cn}'][0]:.0f} {np.round(summ['spline'][f'vmax_split_{cn}'][1:], 0)}")
+    classes = {"all": lambda x: np.ones(len(x), bool), "MV<-8": lambda x: x < -8, "-8<=MV<-6.5": lambda x: (x >= -8) & (x < -6.5),
+               "MV>=-6.5": lambda x: x >= -6.5}
+    summ["spline"] = summ.get("spline", {}) | {"nodes_V": sp["nodes"].tolist(),
+                      "C_nodes": np.exp(CV.lnC_spline(sp["nodes"], sp["nodes"], sp["fit"]["p"])).tolist(),
+                      "tail_dlnC_dV": float((CV.lnC_spline(sp["nodes"][-1] + 1, sp["nodes"], sp["fit"]["p"])
+                                             - CV.lnC_spline(sp["nodes"][-1], sp["nodes"], sp["fit"]["p"]))),
+                      "lnL": sp["fit"]["ll"], "k": sp["fit"]["n_par"], "AIC": sp["aic"], "fit_success": sp["fit"]["success"],
+                      "vmax_M_ref": cfg.get("vmax_M_ref", -8.0), "n_pop": sp["n_pop"]}
+    for lab_, r_, key in (("own-orbit 1/q", spht, "ht"), ("1/V_max", sp, "vmax")):
+        for cn, fn in classes.items():
+            b_ = boot_sum(M, r_, fn)
+            summ["spline"][f"{key}_{cn}"] = [float(r_["w"][fn(M)].sum()), float(np.percentile(b_, 16)), float(np.percentile(b_, 84))]
+        print(f"[real] spline C(V), {lab_}: " + ", ".join(f"{cn} {v[0]:.0f} [{v[1]:.0f}-{v[2]:.0f}]"
+                                                        for cn, v in ((cn, summ['spline'][f'{key}_{cn}']) for cn in classes)))
+    print(f"[real] spline AIC {sp['aic']:.1f} (binned {res['aic_cv']:.1f}); C at nodes {np.round(summ['spline']['C_nodes'], 3)}")
     json.dump(summ, open(out / f"real_cv_summary{tag}.json", "w"), indent=2)
     pd.DataFrame({"name": c["name"], "M_V": M, "feh": feh, "d": d_now,
                   "A_V_now": A_V[:, 0] if np.ndim(A_V) == 2 else A_V, "V_now": res["V_now"], "q": res["q"],
-                  "w": res["w"]}).to_csv(out / f"real_cv_weights{tag}.csv", index=False)
+                  "w": res["w"], "w_spline": sp["w_ht"], "w_vmax": sp["w"], "w_vmax_fehsplit": spf["w"]}).to_csv(out / f"real_cv_weights{tag}.csv", index=False)
+    np.savez_compressed(out / f"real_cv_boot{tag}.npz", boot_idx=res["boot_idx"], boot_w=res["boot_w"],
+                        boot_idx_spline=sp["boot_idx"], boot_w_spline=sp["boot_w_ht"], boot_w_vmax=sp["boot_w"],
+                        boot_idx_fehsplit=spf["boot_idx"], boot_w_vmax_fehsplit=spf["boot_w"])
     with pd.option_context("display.width", 200):
         print(tab.round(3).to_string(index=False)); print(json.dumps(summ, indent=1))
     # fig61: C(V) + implied per-class C(d) vs free fits

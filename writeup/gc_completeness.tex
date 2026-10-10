@@ -37,8 +37,11 @@ GCs into $483$ ($68\%$: $335$--$765$); the faint clusters ($\MV>-6.5$) rise from
 enter the detectable volume cannot be recovered by reweighting observed orbits. Adding extinction
 along every orbit from 3D dust maps (DECaPS, Bayestar19, Marshall, with SFD beyond their reach)
 improves the fit by $\Delta\mathrm{AIC}\approx 8$ and gives a corrected total of 411--455 (faint:
-197--218). A simpler latitude proxy, completeness $C_V(V)\,g(|b|)$, gives 520. Across the models
-the data support, the corrected total is about 410--520 and remains a lower limit.
+197--218). A simpler latitude proxy, completeness $C_V(V)\,g(|b|)$, gives 520. A continuous
+$C(V)$ with a falling faint tail fits better still, and with a $1/V_{\max}$ correction over the orbit
+population, which assumes faint and bright clusters share one orbit distribution, it recovers the true
+total within 0.9--1.1 in mocks. On the data it gives 393--418 GCs (68\% intervals 274--625), of which
+177--189 are fainter than $\MV=-6.5$.
 \end{abstract}
 
 %======================================================================
@@ -465,8 +468,122 @@ E: dust disc & $0.51$ ($0.16$) & $0.68$ ($0.19$) & $0.69$ ($0.19$) \\
 \centering
 \includegraphics[width=\textwidth]{paper_corrected_map_high.png}
 \caption{As Fig.~\ref{fig:corr}, with $A_V$ from 3D dust maps evaluated along every orbit
-(high bracket, the best-fitting model).}
+(high bracket, the best-fitting binned model).}
 \label{fig:ext}
+\end{figure}
+
+\subsection{Faint clusters on never-detectable orbits: continuous $C(V)$ and $1/V_{\max}$}
+\label{sec:vmax}
+
+\paragraph{Two sources of the faint-end shortfall.} Mock tests isolate two causes of the low corrected
+counts in Table~\ref{tab:mock_cv}. With the true $C$, the own-orbit weights $1/q_i$ recover 87\% of the
+total and 63\% of the faint clusters (scenario A, median of 8 realisations): the rest are clusters
+whose $q_i$ is nearly zero. With the fitted binned $C$ the faint fraction falls to 41\%. The last
+$V$ bin is open, so the binned model holds $C$ constant at all fainter $V$, where the true $C$ falls to
+zero. This inflates $q_i$ for faint clusters, whose orbits spend most of their time beyond the
+faintest detection. Even the best binned $C$ (its pseudo-true value) recovers only 36\% of the faint
+clusters.
+
+\paragraph{Continuous $C(V)$.} We therefore also fit $\ln C$ as a piecewise-linear function of $V$,
+with nodes at the median observed $V$ of the same eight equal-count bins. It is anchored to $C=1$ at
+the brightest node and held flat at brighter $V$, and beyond the faintest node it continues with the
+last slope, constrained to be $\le 0$. The model has the same seven parameters as the binned one and
+is fitted with the same likelihood (Eq.~\ref{eq:phaselike}).
+
+\paragraph{$1/V_{\max}$ over the orbit population.} We assume the orbit distribution of GCs does not
+depend on luminosity. Bright clusters ($\MV<-8$) are detectable along essentially all orbits, so their
+$1/q$-weighted orbits sample the orbit population. A cluster of absolute magnitude $M$ placed at a
+random phase on that population is detected with probability
+\begin{equation}
+f(M) = \frac{\sum_{j:\,\MV<-8} q_j^{-1}\,\langle C(M+\mu_j(t))\rangle_t}{\sum_{j:\,\MV<-8} q_j^{-1}},
+\qquad \mu_j(t) = 5\log_{10}\frac{d_j(t)}{10\,\mathrm{pc}} + A_{V,j}(t),
+\end{equation}
+and each observed cluster gets weight $1/f(M_{V,i})$ in place of $1/q_i$. This is the
+$1/V_{\max}$ estimator (Schmidt 1968) with the survey volume replaced by the orbit population. It
+counts faint clusters on orbits that no observed faint cluster occupies. For the split by
+metallicity we apply the assumption within each class ($\feh<-1$, $\ge-1$), using the bright
+clusters of the same class (31 and 9) as its orbit population.
+
+\paragraph{Mock validation.} Table~\ref{tab:vmax_mock} adds two scenarios whose true $C(V)$ is not
+log-linear in the tail: F, a shallow all-sky survey plus a deep partial-area survey,
+$C = 0.8\,\ell(8,0.3) + 0.2\,\ell(13,0.3)$ with $\ell(V_0,w) = [1+e^{(V-V_0)/w}]^{-1}$; and G, a
+power-law tail, $C = (1+V-7)^{-2}$ for $V>7$. The continuous model with $1/V_{\max}$ recovers 0.89--1.13
+of the true total and 0.80--1.03 of the faint clusters in every scenario that satisfies its
+assumptions (A, C, D, F, G). In scenario E, with the true $A_V$ supplied, it recovers 0.95 of the
+total and 0.68 of the faint clusters. It fails, as expected, under the unmodelled latitude selection
+of B (0.73 and 0.65). The price is variance: across realisations the total ranges over 0.67--1.55 of
+truth (16--84\%, scenario A), and the 68\% bootstrap intervals cover the truth in 53--70\% of mocks,
+so they are somewhat too narrow. The continuous model is preferred by AIC in 55--100\% of mocks.
+
+\begin{table}[h]
+\centering
+\caption{Mocks: corrected total / true (faint, $\MV>-6.5$, in brackets), median of 100 realisations.
+Binned: current $C(V)$ with $1/q$. Continuous: $\ln C$ piecewise linear with an extrapolated tail,
+with own-orbit $1/q$ or with $1/V_{\max}$. In E, the true $A_V$ is supplied.}
+\label{tab:vmax_mock}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}
+\toprule
+Scenario & Binned, $1/q$ & Continuous, $1/q$ & Continuous, $1/V_{\max}$ \\
+\midrule
+A: $C(V)$ logistic & 0.80 (0.44) & 1.00 (0.83) & 1.01 (0.95) \\
+B: latitude term & 0.56 (0.27) & 0.74 (0.52) & 0.73 (0.65) \\
+C: Sgr-like clump & 0.71 (0.42) & 0.96 (0.76) & 1.06 (1.03) \\
+D: $C$ not a function of $V$ & 0.87 (0.73) & 0.88 (0.72) & 0.89 (0.81) \\
+E: dust disc & 0.61 (0.18) & 0.85 (0.50) & 0.95 (0.68) \\
+F: two surveys & 0.94 (0.79) & 1.12 (1.05) & 1.13 (0.98) \\
+G: power-law tail & 0.75 (0.39) & 1.04 (0.92) & 0.91 (0.80) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Real data.} The continuous model fits better than the binned one: AIC $-22.6$ against
+$-14.4$ with the map extinction (high bracket), $-23.7$ against $-13.7$ (low bracket), and $-6.9$
+against $-6.0$ without extinction. Table~\ref{tab:vmax_real} gives the corrected counts.
+With the maps, $1/V_{\max}$ gives a total of 393 ($274$--$573$) to 418 ($293$--$625$) and 177--189 faint
+clusters, close to the binned estimates of Table~\ref{tab:dust} (411--455; 197--218). By metallicity,
+the per-class $1/V_{\max}$ gives 245--259 metal-poor and 160--175 metal-rich clusters, against 289--320
+and 120--133 with the binned model. The bright metal-rich clusters lie on inner, dusty orbits, so a
+faint metal-rich cluster on such an orbit is rarely detectable (Fig.~\ref{fig:vmax}).
+
+\begin{table}[h]
+\centering
+\caption{Real data, continuous $C(V)$: corrected counts with 68\% bootstrap intervals. Faint:
+$\MV\ge-6.5$. $1/V_{\max}$ by [Fe/H] uses the bright clusters of the same class as orbit population.}
+\label{tab:vmax_real}
+\small\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccc}
+\toprule
+ & No extinction & Maps, low & Maps, high \\
+\midrule
+AIC (binned) & $-6.9$ ($-6.0$) & $-23.7$ ($-13.7$) & $-22.6$ ($-14.4$) \\
+Total, own-orbit $1/q$ & 749 ($467$--$1185$) & 461 ($338$--$685$) & 432 ($321$--$628$) \\
+Total, $1/V_{\max}$ & 563 ($348$--$841$) & 418 ($293$--$625$) & 393 ($274$--$573$) \\
+Faint, own-orbit $1/q$ & 527 ($270$--$910$) & 224 ($149$--$345$) & 208 ($137$--$314$) \\
+Faint, $1/V_{\max}$ & 322 ($175$--$508$) & 189 ($119$--$292$) & 177 ($112$--$274$) \\
+$\feh<-1$, $1/V_{\max}$ per class & 425 ($265$--$645$) & 259 ($176$--$346$) & 245 ($165$--$327$) \\
+$\feh\ge-1$, $1/V_{\max}$ per class & 119 ($75$--$169$) & 175 ($102$--$277$) & 160 ($94$--$251$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{A check of the shared-orbit assumption.} If faint and bright clusters share one orbit
+distribution, the detected faint clusters should preferentially sit on the more detectable orbits.
+Then $1/V_{\max}$ should exceed the own-orbit $1/q$ for faint clusters: the ratio has median
+1.0--1.4 across the mocks. On the real data it is 0.85 (maps, either bracket) and 0.61 (no
+extinction): observed faint clusters lie on orbits less detectable than those of bright clusters.
+In mocks that satisfy the assumption, a ratio below 0.85 occurs in 4--37\% of realisations and below
+0.61 in 3--19\% (13\% and 5\% in scenario A), so the test does not reject the assumption at this
+sample size. The direction is the one expected if faint GCs are more often on extended halo orbits,
+in which case $1/V_{\max}$ undercounts them.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{paper_corrected_vmax_map_high.png}
+\caption{Corrected distributions with the continuous $C(V)$ and map extinction (high bracket):
+$1/V_{\max}$ (solid; band: 68\% bootstrap) and own-orbit $1/q$ (dashed). (a) $\MV$, with the bright
+clusters of all metallicities as orbit population. (b) [Fe/H], with $1/V_{\max}$ computed per class.}
+\label{fig:vmax}
 \end{figure}
 
 %======================================================================
@@ -474,12 +591,9 @@ E: dust disc & $0.51$ ($0.16$) & $0.68$ ($0.19$) & $0.69$ ($0.19$) \\
 \label{sec:limits}
 
 \begin{enumerate}
-\item \textbf{Unseen orbit families.} The corrected counts are lower limits (Table~\ref{tab:mock_cv}).
-Recovering faint clusters on never-detectable orbits requires an extra assumption --- that faint and
-bright GCs share one orbit distribution --- after which each faint cluster can be weighted by the
-fraction of the orbit population from which it would be visible, in the spirit of $1/V_{\max}$
-(Schmidt 1968). Such a total must be reported separately and tested against corrected orbit
-distributions of bright and faint clusters, by population.
+\item \textbf{Unseen orbit families.} The $1/V_{\max}$ totals (Sec.~\ref{sec:vmax}) rest on orbits that do
+not depend on luminosity. The real data lean, not significantly, the other way. If faint GCs are
+preferentially on extended orbits, $1/V_{\max}$ is still a lower limit for them.
 \item \textbf{Extinction.} The 3D-map treatment rests on fixed conversions (in particular
 $A_V = 8.8\,A_{K_s}$ for Marshall, uncertain in the inner Galaxy) and on SFD beyond the maps' reach.
 Map uncertainties and alternative extinction laws are not propagated; mocks with map-based rather
@@ -487,9 +601,9 @@ than analytic dust would test the full chain.
 \item \textbf{Error propagation.} The intervals cover sampling noise only. An ensemble of perturbed
 phase-space coordinates, alternative potentials and longer, denser integrations would give the
 systematic spread.
-\item \textbf{Smooth $C(V)$ and realistic mocks.} A two- or three-parameter monotone $C(V)$ may tighten
-the results; one bin currently exceeds the anchor ($1.17$). Mocks matched to the observed sample
-size, magnitude--distance distribution and extinction would make the validation more direct.
+\item \textbf{Realistic mocks and interval calibration.} The bootstrap intervals of the
+$1/V_{\max}$ totals cover the truth in 53--70\% of mocks (Sec.~\ref{sec:vmax}). Mocks matched to the
+observed sample size, magnitude--distance distribution and extinction would calibrate them directly.
 \item \textbf{Anchor and assumptions.} All absolute numbers assume the brightest-$V$ bin is complete.
 The method assumes phase mixing in a static axisymmetric potential; the in-situ azimuthal signal
 shows where that may fail.
