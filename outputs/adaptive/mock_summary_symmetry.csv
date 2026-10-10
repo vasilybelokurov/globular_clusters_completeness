@@ -1,0 +1,4 @@
+scenario,p_z,p_y,p_absphi
+A_axisymmetric,0.06,0.09,0.13
+B_latitude,0.08,0.04,0.19
+C_sgr_clump,0.02,0.09,0.07

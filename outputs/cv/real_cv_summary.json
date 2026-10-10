@@ -1,0 +1,18 @@
+{
+  "extinction": "none",
+  "N_obs": 165,
+  "N_corr": 482.5267867928753,
+  "N_corr_p16": 335.4081346955265,
+  "N_corr_p84": 764.5888845804286,
+  "faint_obs": 55,
+  "faint_corr": 266.56063451870017,
+  "faint_corr_p16": 168.02250429189698,
+  "faint_corr_p84": 473.4294215183728,
+  "lnL_CV": 10.020328373075074,
+  "k_CV": 7,
+  "lnL_free_classC(d)": 6.7558315441519445,
+  "k_free": 6,
+  "AIC_CV": -6.040656746150148,
+  "AIC_free": -1.511663088303889,
+  "anchor": "brightest-V bin complete (C=1)"
+}

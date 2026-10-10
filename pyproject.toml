@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gc_completeness"
+version = "0.1.0"
+description = "Orbit-superposition completeness correction for Milky Way globular clusters"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "astropy", "matplotlib", "pandas", "pyyaml", "agama"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools]
+packages = ["gc_completeness"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

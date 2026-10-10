@@ -1,0 +1,15 @@
+# regenerable / local
+outputs/cache/
+__pycache__/
+*.pyc
+.DS_Store
+.ask-codex-packet*
+# third-party data: download with the command in README.md
+data/baumgardt_combined_table.txt
+# LaTeX build files
+writeup/*.aux
+writeup/*.log
+writeup/*.fls
+writeup/*.fdb_latexmk
+writeup/*.out
+writeup/*.synctex.gz

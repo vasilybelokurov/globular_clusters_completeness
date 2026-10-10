@@ -1,0 +1,54 @@
+# Adaptive (equal-count) (M_V, d) bins + Khoperskov completeness + symmetry diagnostics.
+# Assumptions: completeness depends on M_V and present heliocentric d only; fixed target shapes;
+# axisymmetric, z-symmetric intrinsic distribution; phase mixing in a static potential.
+# Sgr GCs are included and the bar region is not masked (PI's instruction).
+seed: 20261010
+output_dir: outputs/adaptive
+plots_dir: plots
+cache_dir: outputs/cache
+catalog_config: configs/default.yaml
+
+n_classes: 3                 # equal-count M_V classes
+n_min_d: 15                  # minimum observed GCs per distance bin (equal-count bins within a class)
+d_hi: 150.0                  # outer edge of the last distance bin [kpc] (= grid size)
+
+targets:                     # fixed shapes; q = axis ratio (1 = spherical)
+  T1_power_law: {model: {type: power_law, gamma: 3.5, rc: 0.05}, q: 1.0}
+  T2_broken_pl: {model: {type: broken_power_law, alpha: 2.0, beta: 4.0, rb: 5.0, rc: 0.3}, q: 1.0}
+  T3_cored:     {model: {type: broken_power_law, alpha: 0.0, beta: 4.0, rb: 3.0, rc: 0.3}, q: 1.0}
+
+populations:                 # progenitor labels from the catalogue column PROG_MA
+  in_situ:
+    labels: ["M-B", "M-D"]
+    targets:
+      T2_q0.5: {model: {type: broken_power_law, alpha: 2.0, beta: 4.0, rb: 5.0, rc: 0.3}, q: 0.5}
+      T2_q0.8: {model: {type: broken_power_law, alpha: 2.0, beta: 4.0, rb: 5.0, rc: 0.3}, q: 0.8}
+  accreted:
+    labels: ["G-E", "G-E/Seq", "G-E?", "Seq", "Seq/G-E", "H99", "H99/G-E", "H99?", "H-E", "Sag"]
+    targets:
+      T2_q1:  {model: {type: broken_power_law, alpha: 2.0, beta: 4.0, rb: 5.0, rc: 0.3}, q: 1.0}
+      T3_q1:  {model: {type: broken_power_law, alpha: 0.0, beta: 4.0, rb: 3.0, rc: 0.3}, q: 1.0}
+population_n_classes: 1      # populations are too small to split in M_V as well
+
+grid:
+  R_edges: [0, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 13, 16, 20, 25, 30, 40, 60, 100, 150]
+  z_edges: [0, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 25, 40, 60, 100, 150]
+orbits: {integration_time_gyr: 5.0, n_samples: 500}
+nnls: {frac: 1.0, n_real: 1, cell_sigma: poisson}
+n_bootstrap: 200
+n_null_real: 500          # null simulations (phases redrawn from fitted C, C refitted) for the symmetry p-values
+
+mock:
+  n_realisations: 100
+  n_bootstrap: 200
+  n_null: 100
+  n_true: 250
+  gclf: [-7.4, 1.2]
+  density: {type: broken_power_law, alpha: 2.0, beta: 4.0, rb: 5.0, rc: 0.3}   # = T2
+  r_trunc: 1000.0
+  completeness: {V_lim: 8.0, dM: 0.5}     # true C = 1/(1+exp((M_V-(V_lim-DM(d)))/dM)), generator only
+  scenarios:
+    A_axisymmetric: {}
+    B_latitude: {b_term: {depth: 0.7, b0: 5.0}}
+    C_sgr_clump:                       # non-phase-mixed clump observed at its present position
+      clump: {n: 15, xyz: [17.5, 2.5, -6.5], vxyz: [237.9, -24.3, 209.0], sig_x: 1.0, sig_v: 10.0}

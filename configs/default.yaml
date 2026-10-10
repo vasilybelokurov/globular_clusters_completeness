@@ -1,0 +1,35 @@
+# Shared inputs: catalogue, solar parameters, Galactic potential (units: kpc, km/s, Msun).
+catalog:
+  # 165 GCs with full 6D (user's compilation; Vasiliev & Baumgardt 2021 astrometry)
+  path: ~/data/catalogues/gc_catalog_updated.fits
+  columns:
+    name: NAME
+    ra: RA
+    dec: DEC
+    distance: DIST
+    pmra: PMRA
+    pmdec: PMDEC
+    vlos: RV
+    distance_error: DIST_ERR
+    pmra_error: PMRA_ERR
+    pmdec_error: PMDEC_ERR
+    vlos_error: RV_ERR
+    feh: FEH
+    ebv: EBV
+    r_h: RH          # pc
+    mass: MASS       # Msun
+    age: AGE         # Gyr
+  missing_values: {feh: [-99.0], age: [-999.0, 0.0]}   # sentinels in the FITS file -> NaN
+  classification_column: null       # no candidate flag in this file -> all 'confirmed'
+  candidate_names: []               # optionally list uncertain GCs to exclude from 'confirmed'
+  supplementary:
+    # Baumgardt combined table (downloaded 2026-10-09 from
+    # https://people.smp.uq.edu.au/HolgerBaumgardt/globular/combined_table.txt):
+    # M_V = 4.83 - 2.5 log10(Mass / (M/L_V)); r_h,l; and clusters absent from the main file
+    path: data/baumgardt_combined_table.txt
+    match_radius_arcsec: 60
+    add_unmatched: true
+
+galactocentric: {}                  # astropy v4.0 defaults (see coordinates.GalacticParams)
+
+potential: {kind: mw4}              # 4-component model used in the user's earlier projects

@@ -1,0 +1,28 @@
+# Completeness as a function of apparent magnitude C(V), V = M_V + DM(d) (no extinction),
+# fitted with the per-cluster phase likelihood on all clusters. Anchor: brightest-V bin complete.
+seed: 20261011
+output_dir: outputs/cv
+plots_dir: plots
+cache_dir: outputs/cache
+catalog_config: configs/default.yaml
+
+n_min_v: 20                 # equal-count bins in observed V (>= 20 GCs each)
+n_classes: 3                # for the comparison with free per-class C(d) fits
+n_min_d: 15
+d_hi: 150.0
+orbits: {integration_time_gyr: 5.0, n_samples: 500}
+n_bootstrap: 200
+
+mock:
+  n_realisations: 100
+  n_bootstrap: 100
+  n_true: 250
+  gclf: [-7.4, 1.2]
+  density: {type: broken_power_law, alpha: 2.0, beta: 4.0, rb: 5.0, rc: 0.3}
+  r_trunc: 1000.0
+  completeness: {V_lim: 8.0, dM: 0.5}        # true C = logistic(M_V - (V_lim - DM)) -> a function of V
+  scenarios:
+    A_C_of_V: {}
+    B_latitude: {b_term: {depth: 0.7, b0: 5.0}}
+    C_sgr_clump: {clump: {n: 15, xyz: [17.5, 2.5, -6.5], vxyz: [237.9, -24.3, 209.0], sig_x: 1.0, sig_v: 10.0}}
+    D_not_V: {not_V: {V0: 4.0, slope: 0.6}}   # C depends on M_V and d but not through V alone

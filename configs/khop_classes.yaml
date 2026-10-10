@@ -1,0 +1,43 @@
+# Khoperskov orbit superposition per luminosity class; completeness C(M_V, d).
+# Assumptions: C depends on M_V and present heliocentric d only; fixed target shapes; phase mixing.
+seed: 20261010
+output_dir: outputs/khop_classes
+plots_dir: plots
+cache_dir: outputs/cache
+catalog_config: configs/default.yaml      # catalogue, potential, solar parameters
+
+classes:                                  # M_V class edges (brightest first)
+  - {name: bright, M_lo: -12.0, M_hi: -7.0}
+  - {name: mid,    M_lo: -7.0,  M_hi: -6.0}
+  - {name: faint,  M_lo: -6.0,  M_hi: 0.5}
+d_edges: [0, 6, 10, 15, 25, 50, 150]      # heliocentric distance bins [kpc]
+anchors_kpc: [6, 10]                      # absolute completeness shown under "C=1 for d < anchor" (assumption)
+absolute_for: [bright, mid]               # faint: relative completeness only (no defensible anchor)
+
+targets:                                  # FIXED shapes (amplitude irrelevant), spherical
+  T1_power_law:   {type: power_law, gamma: 3.5, rc: 0.05}
+  T2_broken_pl:   {type: broken_power_law, alpha: 2.0, beta: 4.0, rb: 5.0, rc: 0.3}
+  T3_cored:       {type: broken_power_law, alpha: 0.0, beta: 4.0, rb: 3.0, rc: 0.3}
+
+grid:
+  R_edges: [0, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 13, 16, 20, 25, 30, 40, 60, 100, 150]
+  z_edges: [0, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 25, 40, 60, 100, 150]
+orbits: {integration_time_gyr: 5.0, n_samples: 500}
+nnls: {frac: 1.0, n_real: 1, cell_sigma: poisson}   # all class orbits in one fit: paper subsets 10% of ~4e4 orbits (~4e3 per fit); with 30-90 orbits per class subsetting underfits (mock-tested)
+n_bootstrap: 200
+
+mock:
+  n_realisations: 30
+  n_true: 250
+  gclf: [-7.4, 1.2]
+  density: {type: broken_power_law, alpha: 2.0, beta: 4.0, rb: 5.0, rc: 0.3}   # = T2
+  r_trunc: 1000.0
+  completeness:                           # TRUE C(M_V, d) used only to generate detections
+    V_lim: 10.0                           # C = 1/(1+exp((M_V - (V_lim - DM(d)))/dM))
+    dM: 0.5
+  scenarios:
+    S1_separable: {}
+    S2_faint_concentrated:                # faint class follows a more compact density (separability broken)
+      faint_density: {type: broken_power_law, alpha: 1.0, beta: 5.0, rb: 2.0, rc: 0.3}
+    S3_latitude_dependence:               # C also depends on |b| (the C(M_V,d) assumption broken)
+      b_term: {depth: 0.7, b0: 5.0}

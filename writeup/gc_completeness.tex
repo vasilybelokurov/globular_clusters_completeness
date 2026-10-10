@@ -1,0 +1,396 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\graphicspath{{../plots/}}
+\sisetup{separate-uncertainty=true}
+
+\newcommand{\MV}{M_V}
+\newcommand{\feh}{[\mathrm{Fe/H}]}
+\newcommand{\dhel}{d}
+\newcommand{\avg}[1]{\left\langle #1 \right\rangle_t}
+
+\title{Completeness of the Milky Way globular-cluster catalogue\\from the phases of cluster orbits}
+\author{Draft prepared with Claude Code for V.~Belokurov}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We estimate how the completeness of the Milky Way globular-cluster (GC) catalogue depends on
+absolute magnitude and heliocentric distance, using the 165 GCs with full six-dimensional phase-space
+data. The estimator conditions on each cluster's own orbit: if clusters are phase-mixed, the
+present position of a detected cluster samples its orbit with probability proportional to the
+completeness $C$ at that point. Maximising the resulting likelihood needs no model of the
+intrinsic GC density. On mock catalogues with known selection it recovers completeness without bias
+and with calibrated intervals (recovered/true $=0.97$--$0.99$, 68\% coverage $0.67$--$0.71$). A
+fixed-target orbit-superposition estimator in the spirit of Khoperskov et al.\ (2025) is biased high
+by $\approx 25\%$ on the same mocks. Applied to the data with $C$ a function of
+extinction-free apparent magnitude $V$, completeness falls from 1 at $V<6$ (assumed) to $0.14$ at
+$V>11$. Weighting each cluster by the inverse of its orbit-averaged completeness turns 165 observed
+GCs into $483$ ($68\%$: $335$--$765$); the faint clusters ($\MV>-6.5$) rise from 55 to $267$
+($168$--$473$). Mocks show these totals are lower limits, because faint clusters on orbits that never
+enter the detectable volume cannot be recovered by reweighting observed orbits. A first extinction
+test raises the total by $\approx 40\%$ but is disfavoured by the data, so extinction remains the
+leading open systematic.
+\end{abstract}
+
+%======================================================================
+\section{Data}
+\label{sec:data}
+
+We use the 165 confirmed GCs with full phase-space data (positions, distances, proper motions,
+line-of-sight velocities and their errors) from the PI's compilation of Vasiliev \& Baumgardt (2021)
+astrometry. Absolute magnitudes come from the Baumgardt combined table\footnote{Downloaded
+2026-10-09 from \url{https://people.smp.uq.edu.au/HolgerBaumgardt/globular/combined_table.txt}.} as
+$\MV = 4.83 - 2.5\log_{10}(M_{\rm dyn}/\Upsilon_V)$, with $M_{\rm dyn}$ the dynamical mass and
+$\Upsilon_V$ the $V$-band mass-to-light ratio. Two confirmed clusters without 6D data are excluded.
+Progenitor labels (in-situ: main bulge and main disc, 61 GCs; accreted: Gaia-Enceladus, Sequoia,
+Helmi streams, high-energy group and Sagittarius, 64 GCs) come from the catalogue column
+\texttt{PROG\_MA}; we have not verified their provenance (they appear to follow Massari et al.\ 2019).
+
+Positions and velocities are transformed to the Galactocentric frame with the astropy v4.0 solar
+parameters ($R_0 = 8.122$ kpc, $z_\odot = 20.8$ pc, $\boldsymbol v_\odot = (12.9, 245.6, 7.78)$
+km\,s$^{-1}$; Astropy Collaboration 2022). Orbits are integrated with AGAMA (Vasiliev 2019) in a
+static axisymmetric potential (Miyamoto--Nagai disc, $6.8\times10^{10}\,M_\odot$, $a=3.0$, $b=0.28$
+kpc; two Dehnen spheroids, $5\times10^{9}\,M_\odot$ at $1.0$ kpc and $1.71\times10^{9}\,M_\odot$ at
+$0.07$ kpc; NFW halo, $5.4\times10^{11}\,M_\odot$, $r_s = 15.62$ kpc), forward for 5 Gyr from the
+present and sampled at 500 equal time steps. Energy is conserved to $2\times10^{-6}$. No observed
+cluster and no orbit sample lies beyond 150 kpc.
+
+%======================================================================
+\section{Method}
+\label{sec:method}
+
+\subsection{Per-cluster phase likelihood}
+
+Let cluster $i$ move on a known orbit, sampled at times $t$, with heliocentric distance
+$\dhel_i(t)$. If the population is phase-mixed in a static potential, the present phase of an
+undetected cluster is uniform in $t$. Detection with probability $C$ tilts that distribution, so the
+present phase of a \emph{detected} cluster, conditional on its orbit, has density proportional to
+$C$ at that phase. The log-likelihood of the observed present positions is
+\begin{equation}
+\ln \mathcal{L} = \sum_i \Big[\ln C(M_{V,i}, \dhel_{i,\rm now}) - \ln \avg{C(M_{V,i},\dhel_i(t))}\Big].
+\label{eq:phaselike}
+\end{equation}
+Two properties make Eq.~(\ref{eq:phaselike}) useful. First, no model of the intrinsic GC density
+enters. Second, conditioning on each detected orbit removes the dependence on which orbits happen to
+be in the catalogue. The overall scale of $C$ cancels, so the data constrain $C$ only up to one
+constant, and only over the range of $\dhel$ (or $V$) that the observed orbits span.
+
+We take $C$ piecewise constant in bins, write $\theta_k = \ln(C_k/C_0)$ with the reference bin
+$k=0$ fixed, and maximise Eq.~(\ref{eq:phaselike}) with L-BFGS-B ($-8 \le \theta_k \le 4$). The
+likelihood is concave in $\theta$. Intervals are 68\% profile-likelihood intervals
+($2\Delta\ln\mathcal{L}=1$). The last bin is open-ended.
+
+\subsection{Two parameterisations of $C$}
+
+\paragraph{$C(\MV,\dhel)$ per luminosity class.} We split the sample into three equal-count $\MV$
+classes ($\approx 55$ GCs each) and, within each, into equal-count distance bins of at least 15 GCs
+(three bins of 18--19 GCs). Bins are chosen once on the observed sample and then frozen. Each class
+yields $C(\dhel)/C(\text{nearest bin})$; the classes are not linked to one another.
+
+\paragraph{$C(V)$.} To link the classes we assume completeness depends on apparent magnitude only,
+$C = C(V)$ with $V = \MV + 5\log_{10}(\dhel/10\,\mathrm{pc})$. This is a special case of
+$C(\MV,\dhel)$: a faint cluster nearby and a bright cluster farther away with the same $V$ share
+the same completeness. All 165 clusters then enter one fit, with $V_i(t)$ varying along each orbit.
+We use eight equal-count bins in observed $V$ (20--21 GCs each) and fix the brightest bin
+($V<6.0$) as complete, $C_0 = 1$. This single anchor makes $C$ absolute at all $\MV$. $V$ excludes
+extinction; Sec.~\ref{sec:ext} tests one extinction model.
+
+\subsection{Corrected counts}
+
+Each observed cluster receives the weight $w_i = 1/q_i$, with $q_i = \avg{C(V_i(t))}$ its
+orbit-averaged completeness. Corrected distributions are weighted histograms. This is the
+Horvitz--Thompson (1952) inverse-inclusion-probability estimator with the inclusion probability
+averaged over orbital phase. It corrects for incompleteness along the orbits of observed clusters; it
+cannot add clusters on orbit families that are never detectable. Uncertainties on corrected counts
+come from a cluster bootstrap (200 replicates): each replicate resamples clusters, refits $C$ on the
+fixed bins, and sums the refitted weights of the resampled clusters.
+
+\subsection{Symmetry tests}
+
+If the model holds, the present position of each cluster is a draw from its orbit's $C$-weighted
+phase distribution. For three statistics --- $z$, $y$ (the Galactic-longitude side) and the
+azimuth from the Sun's direction $|\phi'|$ --- we compute each cluster's randomised probability
+integral transform (PIT) against that distribution, pool the 165 values, and form a
+Kolmogorov--Smirnov statistic. The $p$-value comes from 500 null simulations that redraw present
+phases from the fitted $C$ and refit $C$ in every simulation, with a $+1$ correction.
+
+\subsection{Comparison estimator: orbit superposition with a fixed target}
+
+Following Khoperskov et al.\ (2025), we also fit non-negative orbit weights so that the
+time-averaged occupancy of the observed orbits on an $(R,|z|)$ grid reproduces a fixed target
+density (spherical broken power law with inner slope 2, outer slope 4, $r_b = 5$ kpc, $r_c = 0.3$
+kpc; and variants), and take $C = N_{\rm obs}/N_{\rm corr}$ in each distance bin. Unlike
+Eq.~(\ref{eq:phaselike}), this estimator depends on the assumed target density.
+
+%======================================================================
+\section{Validation on mock catalogues}
+\label{sec:mocks}
+
+Mock populations are drawn from an isotropic quasi-spherical distribution function in the same
+potential, with a broken-power-law density (inner slope 2, outer slope 4, $r_b = 5$ kpc,
+$r_c = 0.3$ kpc), 250 GCs per realisation and a Gaussian luminosity function
+$\MV \sim \mathcal{N}(-7.4, 1.2)$. Each mock cluster sits at a uniformly random phase of its orbit
+and is detected with probability $C_{\rm true} = \{1+\exp[(\MV - (V_{\rm lim} - {\rm DM}))/0.5]\}^{-1}$,
+$V_{\rm lim} = 8$, so $C_{\rm true}$ is a function of $V$. Scenarios B--D break the assumptions:
+B multiplies $C$ by a latitude term $1 - 0.7\,e^{-|b|/5^\circ}$; C adds a non-phase-mixed clump of
+15 Sagittarius-like clusters; D makes $C$ depend on $\MV$ and $\dhel$ but not through $V$ alone. Each
+estimator is compared with its own correct truth: for the phase likelihood, the value it converges to
+for an infinite sample; for the target estimator, the true detected-to-intrinsic ratio per bin.
+
+\begin{table}[h]
+\centering
+\caption{Mock recovery of relative completeness $C(\dhel)/C(\text{nearest bin})$ per luminosity class
+(100 realisations per scenario). Ratios are recovered/true, median and 16--84\% range; coverage is
+the fraction of nominal 68\% intervals containing the truth.}
+\label{tab:mock_classes}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}
+\toprule
+Estimator & A: assumptions hold & B: latitude-dependent $C$ & C: Sgr-like clump \\
+\midrule
+Phase likelihood & $0.99$ ($0.68$--$1.41$); cov.\ $0.67$ & $0.98$ ($0.71$--$1.52$); $0.71$ & $0.97$ ($0.68$--$1.34$); $0.71$ \\
+Target, plain ratio & $1.29$ ($0.88$--$1.85$); $0.48$ & $1.30$; $0.54$ & $1.39$; $0.45$ \\
+Target, bias-reduced & $1.23$ ($0.84$--$1.77$); $0.50$ & $1.22$; $0.58$ & $1.32$; $0.47$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Mock validation of $C(V)$ and the corrected counts (100 realisations per scenario).}
+\label{tab:mock_cv}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+ & A: $C(V)$ true & B: latitude & C: Sgr clump & D: not $C(V)$ \\
+\midrule
+$C(V)$ shape, recovered/true & $0.92$ & $1.08$ & $1.01$ & $1.08$ \\
+\quad 68\% coverage & $0.69$ & $0.68$ & $0.68$ & $0.67$ \\
+Corrected total / true & $0.80$ ($0.60$--$1.07$) & $0.56$ & $0.71$ & $0.87$ \\
+Faint ($\MV>-6.5$): observed / true & $0.15$ & $0.12$ & $0.15$ & $0.64$ \\
+Faint: corrected / true & $0.44$ & $0.27$ & $0.42$ & $0.73$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tables~\ref{tab:mock_classes} and \ref{tab:mock_cv} and Figs.~\ref{fig:mock_classes} and
+\ref{fig:mock_cv} summarise the tests. The phase likelihood recovers completeness without bias and
+with calibrated intervals in every scenario, including those that break its assumptions. The target
+estimator is biased high by about 25\% even when given the correct target. The corrected totals are
+low: in scenario A, where the model is correct, they recover 80\% of the true population and 44\% of
+the faint clusters. The shortfall comes from faint clusters whose orbits never bring them within
+detectable distance; no reweighting of the observed orbits recovers them. The bootstrap intervals on
+the total match the scatter across realisations (half-width $\approx 26\%$ of truth, scatter $24\%$),
+so their low coverage reflects this bias, not mis-sized intervals.
+
+Two diagnostics have little power at this sample size. The symmetry tests reject at $p<0.05$ in
+6--13\% of null mocks (the $|\phi'|$ test reaches $p\le0.01$ in 2\%) and in 2--19\% of mocks that
+break the assumptions. The AIC comparison of $C(V)$ against free per-class $C(\dhel)$ favours the
+free model in only 31\% of scenario-D mocks.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{paper_mock_classes.png}
+\caption{Mock validation of the per-class estimators. (a) Recovered/true relative completeness
+(median and 16--84\% range) for the phase likelihood and the target estimator, plain and
+bias-reduced, in scenarios A--C; the vertical numbers give the 68\% coverage. (b) Fraction of mocks
+in which each symmetry test gives $p<0.05$; the dotted line marks 5\%. (c) Target-fit residuals when
+the truth is T2; a residual cannot rank targets, since a T1 fit often beats the true T2.}
+\label{fig:mock_classes}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{paper_mock_cv.png}
+\caption{Mock validation of $C(V)$. (a) Recovered/true $C(V)$ per bin (median and 16--84\% range)
+in scenarios A--D; numbers give the 68\% coverage. (b)--(e) True (black), observed (dashed) and
+corrected (orange) $\MV$ distributions, mean over realisations; numbers give the median
+corrected/true ratio for all GCs and for $\MV>-6.5$.}
+\label{fig:mock_cv}
+\end{figure}
+
+%======================================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{Completeness per luminosity class}
+
+Table~\ref{tab:classes} and Fig.~\ref{fig:classes} give the per-class completeness. In the two
+brighter classes completeness stays near unity out to $\approx 10$ kpc and falls to 0.4--0.6
+beyond. The faint class drops to $0.44$ already at 8--21 kpc. In-situ clusters lose completeness
+steeply with distance (0.18 beyond 8.8 kpc); accreted clusters stay near unity to 27 kpc and fall to
+0.27 beyond (Fig.~\ref{fig:pops}). The fixed-target estimator agrees with the phase likelihood within
+the intervals in most bins, but for the accreted clusters it gives values above 1 beyond 18 kpc,
+which the phase likelihood does not reproduce; these follow from the assumed target shape.
+
+\begin{table}[h]
+\centering
+\caption{Phase-likelihood completeness relative to the nearest distance bin, with 68\% profile
+intervals. Each class holds 55 GCs in three bins of 18--19.}
+\label{tab:classes}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}
+\toprule
+$\MV$ class & nearest bin & second bin & third bin \\
+\midrule
+$-10.54$ to $-7.58$ & $0$--$8.3$ kpc: 1 & $8.3$--$11.1$ kpc: $1.22\,[0.88, 1.71]$ & $>11.1$ kpc: $0.63\,[0.41, 0.95]$ \\
+$-7.58$ to $-6.50$ & $0$--$7.4$ kpc: 1 & $7.4$--$9.5$ kpc: $0.75\,[0.52, 1.07]$ & $>9.5$ kpc: $0.41\,[0.28, 0.61]$ \\
+$-6.50$ to $-0.96$ & $0$--$7.8$ kpc: 1 & $7.8$--$21.5$ kpc: $0.44\,[0.31, 0.62]$ & $>21.5$ kpc: $0.56\,[0.27, 1.22]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{paper_real_classes.png}
+\caption{Completeness relative to the nearest distance bin for three $\MV$ classes: phase likelihood
+(black squares, 68\% profile intervals; grey bars show the bin extent) and the fixed-target
+estimator for targets T2 and T3 (coloured; bias-reduced, 68\% bootstrap). Numbers give the observed
+clusters per bin.}
+\label{fig:classes}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textwidth]{paper_real_populations.png}
+\caption{As Fig.~\ref{fig:classes}, for in-situ (left) and accreted (right) clusters, all
+luminosities combined.}
+\label{fig:pops}
+\end{figure}
+
+\subsection{Symmetry tests}
+
+The pooled PIT tests (Fig.~\ref{fig:sym}) give $p = 0.46$ for $z$, $0.042$ for $y$ and $0.006$ for
+$|\phi'|$. Split by population, the in-situ clusters give $p = 0.040$, $0.29$ and $0.006$, and the
+accreted clusters $0.51$, $0.49$ and $0.75$. Since null mocks reach $p\le0.01$ for $|\phi'|$ in only
+2\% of realisations, the in-situ clusters carry an azimuthal structure that completeness depending
+on $(\MV,\dhel)$ alone does not explain. The Galactic bar, which this analysis does not mask, is one
+candidate. The data do not identify the cause.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{paper_real_symmetry.png}
+\caption{Pooled PIT values for $z$, $y$ and $|\phi'|$ against each orbit's $C$-weighted phase
+distribution. Uniform histograms are expected if the model holds; the titles give the KS statistic
+and the null-calibrated $p$-value.}
+\label{fig:sym}
+\end{figure}
+
+\subsection{Completeness versus apparent magnitude}
+
+Table~\ref{tab:cv} and Fig.~\ref{fig:cv} give $C(V)$. Completeness falls steadily from unity at
+$V<6$ to $0.14\,[0.07,0.30]$ at $V>11$. The per-class completeness curves implied by $C(V)$ follow
+the free per-class fits (Fig.~\ref{fig:cv}, right), and the AIC prefers $C(V)$ ($-6.0$ against
+$-1.5$), although the mocks show this comparison is weak.
+
+\begin{table}[h]
+\centering
+\caption{$C(V)$ from the phase likelihood (brightest bin fixed at 1); 68\% profile intervals. Each bin
+holds 20--21 GCs.}
+\label{tab:cv}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccccc}
+\toprule
+$V$ & $<6.0$ & $6.0$--$6.6$ & $6.6$--$7.2$ & $7.2$--$7.6$ & $7.6$--$8.2$ & $8.2$--$9.2$ & $9.2$--$11.0$ & $>11.0$ \\
+\midrule
+$C$ & 1 & $1.17$ & $0.56$ & $0.64$ & $0.41$ & $0.25$ & $0.21$ & $0.14$ \\
+68\% & -- & $[0.82, 1.68]$ & $[0.38, 0.82]$ & $[0.43, 0.95]$ & $[0.27, 0.62]$ & $[0.16, 0.39]$ & $[0.13, 0.35]$ & $[0.07, 0.30]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{paper_real_cv.png}
+\caption{(a) $C(V)$ with 68\% profile intervals; grey bars show the bin extent and numbers give
+clusters per bin. (b)--(d) Per-class completeness versus distance from free fits (black) and
+implied by $C(V)$ (orange).}
+\label{fig:cv}
+\end{figure}
+
+\subsection{Corrected luminosity and metallicity distributions}
+
+Weighting by $1/q_i$ (weights from $0.94$ to $6.9$) turns the 165 observed GCs into $483$
+($68\%$: $335$--$765$). The correction grows with faintness (Fig.~\ref{fig:corr}): bright clusters
+($\MV<-8$) rise from 40 to 60, intermediate ones ($-8\le\MV<-6.5$) from 70 to 156, and faint ones
+($\MV\ge-6.5$) from 55 to 267 ($168$--$473$). The corrected metallicity distribution is about three
+times the observed one at all $\feh$ and keeps its bimodal shape, with peaks near $-1.5$ and $-0.6$.
+Given Sec.~\ref{sec:mocks}, these corrected numbers are lower limits if the real selection
+resembles the mocks.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{paper_corrected.png}
+\caption{Observed (black) and completeness-corrected (orange, 68\% bootstrap band) $\MV$ and $\feh$
+distributions using $C(V)$. Lower panels: corrected/observed.}
+\label{fig:corr}
+\end{figure}
+
+\subsection{Sensitivity to extinction}
+\label{sec:ext}
+
+Adding $A_V = 3.1\,E(B-V)$, with each cluster's present-day reddening held fixed along its orbit,
+changes the totals substantially: 690 ($457$--$1172$) in total and 337 ($203$--$652$) faint
+(Fig.~\ref{fig:ext}). The data disfavour this model, however: its AIC is $+1.3$, against $-6.0$
+without extinction and $-1.5$ for free per-class fits. Holding present reddening fixed as a cluster
+moves to other sightlines is unphysical, so this test shows that extinction matters at the 40\% level
+but does not measure its effect.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{paper_corrected_present_ebv.png}
+\caption{As Fig.~\ref{fig:corr}, with $A_V = 3.1\,E(B-V)$ at the present position added to $V$.}
+\label{fig:ext}
+\end{figure}
+
+%======================================================================
+\section{Limitations and next steps}
+\label{sec:limits}
+
+\begin{enumerate}
+\item \textbf{Unseen orbit families.} The corrected counts are lower limits (Table~\ref{tab:mock_cv}).
+Recovering faint clusters on never-detectable orbits requires an extra assumption --- that faint and
+bright GCs share one orbit distribution --- after which each faint cluster can be weighted by the
+fraction of the orbit population from which it would be visible, in the spirit of $1/V_{\max}$
+(Schmidt 1968). Such a total must be reported separately and tested against corrected orbit
+distributions of bright and faint clusters, by population.
+\item \textbf{Extinction.} Evaluate a 3D dust map along each orbit and add $A_V$ to $V$; test on mocks
+with direction-dependent extinction.
+\item \textbf{Error propagation.} The intervals cover sampling noise only. An ensemble of perturbed
+phase-space coordinates, alternative potentials and longer, denser integrations would give the
+systematic spread.
+\item \textbf{Smooth $C(V)$ and realistic mocks.} A two- or three-parameter monotone $C(V)$ may tighten
+the results; one bin currently exceeds the anchor ($1.17$). Mocks matched to the observed sample
+size, magnitude--distance distribution and extinction would make the validation more direct.
+\item \textbf{Anchor and assumptions.} All absolute numbers assume the brightest-$V$ bin is complete.
+The method assumes phase mixing in a static axisymmetric potential; the in-situ azimuthal signal
+shows where that may fail.
+\end{enumerate}
+
+%======================================================================
+\begin{thebibliography}{9}
+\bibitem{astropy22} Astropy Collaboration et al.\ 2022, ApJ, 935, 167,
+\href{https://doi.org/10.3847/1538-4357/ac7c74}{doi:10.3847/1538-4357/ac7c74}
+\bibitem{ht52} Horvitz D.~G., Thompson D.~J.\ 1952, J.\ Am.\ Stat.\ Assoc., 47, 663,
+\href{https://doi.org/10.1080/01621459.1952.10483446}{doi:10.1080/01621459.1952.10483446}
+\bibitem{khop25} Khoperskov S.\ et al.\ 2025, A\&A, 695, A220,
+\href{https://doi.org/10.1051/0004-6361/202453304}{doi:10.1051/0004-6361/202453304},
+\href{https://arxiv.org/abs/2411.15062}{arXiv:2411.15062}
+\bibitem{massari19} Massari D., Koppelman H.~H., Helmi A.\ 2019, A\&A, 630, L4,
+\href{https://doi.org/10.1051/0004-6361/201936135}{doi:10.1051/0004-6361/201936135}
+\bibitem{schmidt68} Schmidt M.\ 1968, ApJ, 151, 393,
+\href{https://doi.org/10.1086/149446}{doi:10.1086/149446}
+\bibitem{vasiliev19} Vasiliev E.\ 2019, MNRAS, 482, 1525,
+\href{https://doi.org/10.1093/mnras/sty2672}{doi:10.1093/mnras/sty2672}
+\bibitem{vb21} Vasiliev E., Baumgardt H.\ 2021, MNRAS, 505, 5978,
+\href{https://doi.org/10.1093/mnras/stab1475}{doi:10.1093/mnras/stab1475}
+\end{thebibliography}
+
+\end{document}
