@@ -45,6 +45,80 @@ total within 0.9--1.1 in mocks. On the data it gives 393--418 GCs (68\% interval
 \end{abstract}
 
 %======================================================================
+\section{How the method works, in brief}
+\label{sec:brief}
+
+\paragraph{The idea.} If a cluster is caught in only a small fraction of the places its orbit takes
+it, it must have siblings that sit in the uncaught parts of their orbits right now. We count them.
+
+\paragraph{Ingredients.} For each catalogued cluster we integrate its orbit for 5 Gyr and record it at
+500 moments. At each moment we compute how bright it would look from the Sun,
+$V = \MV + 5\log_{10}(d/10\,\mathrm{pc}) + A_V$. This gives the cluster's \emph{time fractions}: how
+long it spends looking like each value of $V$. The catalogue adds one fact per cluster, the $V$ it
+has today.
+
+\paragraph{Logic.} If every cluster were detected, today would be a random moment of each orbit, and
+clusters would be caught at each $V$ in proportion to the time they spend there. If clusters
+looking faint are harder to detect, we catch them preferentially in their bright phases. The mismatch
+between where clusters are caught and where they spend their time measures how detection falls
+with $V$.
+
+\paragraph{A worked example.} Take two brightness bins, bright (B) and faint (F), and one unknown,
+$r = C_F/C_B$: how much less often a cluster is detected while it looks faint than while it looks
+bright ($r=1$: no selection; $r=0$: never detected when faint). Three clusters:
+
+\begin{center}
+\small
+\begin{tabular}{lccc}
+\toprule
+Cluster & Time looking bright & Time looking faint & Seen today \\
+\midrule
+1 & 50\% & 50\% & B \\
+2 & 20\% & 80\% & B \\
+3 & 10\% & 90\% & F \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The chance of catching a cluster in a bin is its time there times the detection probability there,
+divided by the same sum over both bins. For cluster 1, caught bright, this is
+$0.5\,C_B/(0.5\,C_B + 0.5\,C_F) = 1/(1+r)$: $C_B$ cancels, so the positions measure only the ratio
+$r$. For clusters 2 and 3 the chances are $1/(1+4r)$ and $9r/(1+9r)$. The clusters are independent, so
+the probability of seeing all three where they are is the product, the likelihood
+\begin{equation}
+L(r) = \frac{1}{1+r}\times\frac{1}{1+4r}\times\frac{9r}{1+9r}.
+\end{equation}
+It is $0.090$ at $r=1$, $0.277$ at $r=0.25$, $0.314$ at $r=0.13$ and $0.246$ at $r=0.05$. Its maximum
+is at $r\approx0.13$. Clusters 1 and 2 spend most of their time faint but are caught bright, which
+rules out weak selection. Cluster 3 is caught faint, which rules out $r\approx0$. The fit is the
+compromise.
+
+\paragraph{The anchor.} The likelihood fixes only ratios. Assuming bright-looking clusters are all
+detected, $C_B=1$, gives $C_F = 0.13$. This is set once, for the whole function, not per cluster.
+
+\paragraph{The weights.} Each cluster's overall detection chance $q$ is $C$ averaged over its own time
+fractions: $q_1 = 0.5 + 0.5\times0.13 = 0.565$, $q_2 = 0.2 + 0.8\times0.13 = 0.304$,
+$q_3 = 0.1 + 0.9\times0.13 = 0.217$. Each stands for $1/q$ clusters: $1.8 + 3.3 + 4.6 \approx 9.7$
+clusters from the 3 observed.
+
+\paragraph{No luminosity function is needed.} We never compare counts at different luminosities. Each
+cluster is compared only with its own orbit, and the probability of catching it at a given phase
+depends on its orbit, its own (measured) $\MV$ and $C$, not on how common clusters of its
+luminosity are. In a toy population where half of each orbit looks bright and half faint, the number
+of clusters in a luminosity group changes how many we see, not the near/far split of those we see.
+The corrected histogram of $\MV$ is then an \emph{output}: the luminosity function. The price is the
+assumption that replaces it: clusters are at random phases of their orbits today (phase mixing),
+whatever their luminosity.
+
+\paragraph{The real analysis} is the same procedure with all 165 clusters, 8 bins in $V$ (7 unknown
+ratios, Eq.~\ref{eq:phaselike}) and the likelihood maximised numerically. Two refinements
+(Sec.~\ref{sec:vmax}) handle faint clusters. A continuous $C(V)$ keeps falling beyond the faintest
+detection. And in the $1/V_{\max}$ form, a faint cluster's detection chance is averaged over the
+orbits of bright clusters, which are visible almost anywhere, rather than over its own orbit alone.
+This counts faint clusters on orbits where none has been seen, on the assumption that faint and
+bright clusters share one orbit distribution.
+
+%======================================================================
 \section{Data}
 \label{sec:data}
 
