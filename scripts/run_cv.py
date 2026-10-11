@@ -164,6 +164,62 @@ def analyse_spline(M, V_t, V_now, cfg, n_boot, rng, M_ref=-8.0, groups=None):
                 boot_idx=np.array(bi, int).reshape(sh), boot_w=np.array(bw).reshape(sh), boot_w_ht=np.array(bh).reshape(sh))
 
 
+def phase_pit(d_t, d_now, lnC_t):
+    """u_i = C-weighted fraction of orbit time closer to the Sun than now; U(0,1) if the model is right."""
+    Ct = np.exp(lnC_t - lnC_t.max(1, keepdims=True))
+    return (Ct * (d_t < d_now[:, None])).sum(1) / Ct.sum(1)
+
+
+def sky_region(l, b, window):
+    """Region label per sample: 1 inside the inner window |l| < L, |b| < B (deg), else 0 (anchor region)."""
+    L, B = window
+    lw = np.abs(np.mod(np.asarray(l, float) + 180.0, 360.0) - 180.0)
+    return ((lw < L) & (np.abs(b) < B)).astype(int)
+
+
+def make_region_model(kind, V_now, reg_now, n_reg, cfg):
+    """kind: 'sep' = separate spline per region (CV.RegionalC); 'contrast' = shared spline + constant
+    ln-contrast per region; 'contrast_slope' = shared spline + contrast linear in V (CV.ContrastC)."""
+    if kind == "sep":
+        return CV.RegionalC(CV.region_nodes(V_now, reg_now, n_reg, cfg.get("n_min_v_region", cfg["n_min_v"])))
+    nodes = CV.spline_nodes(V_now, cfg["n_min_v"])
+    return CV.ContrastC(nodes, n_reg, slope=(kind == "contrast_slope"))
+
+
+def analyse_region(M, V_t, V_now, reg_t, reg_now, cfg, n_boot, rng, M_ref=-8.0, kind="sep"):
+    """Direction-dependent continuous C (see make_region_model); region 0 carries the anchor.
+    Weights: w_ht = 1/q_i (own orbit, region-dependent C along it) and w = 1/f(M_i), 1/V_max over the
+    orbit population M_V < M_ref, with f(M) = sum_j w_j <C(M + mu_j(t), k_j(t))>_t / sum_j w_j."""
+    M = np.asarray(M, float)
+    n_reg = int(max(reg_t.max(), reg_now.max())) + 1
+    model = make_region_model(kind, V_now, reg_now, n_reg, cfg)
+    B_t, B_now = model.basis(V_t, reg_t), model.basis(V_now, reg_now)
+    mu = V_t - M[:, None]
+
+    def one(idx, p0=None):
+        f = CV.fit_cv_spline(B_t[idx], B_now[idx], p0, bounds=model.bounds())
+        q = np.exp(B_t[idx] @ f["p"]).mean(1)
+        pop = M[idx] < M_ref
+        W = (1.0 / q[pop]) / np.sum(1.0 / q[pop])
+        mp, rp = mu[idx][pop], reg_t[idx][pop]
+        Mu, inv = np.unique(M[idx], return_inverse=True)
+        fM = np.array([(W * np.exp(model.lnC(m + mp, rp, f["p"])).mean(1)).sum() for m in Mu])[inv]
+        return f, 1.0 / q, 1.0 / fM
+    N = len(M)
+    f, w_ht, w = one(np.arange(N))
+    bi, bw, bh, bp = [], [], [], []
+    for _ in range(n_boot):
+        idx = rng.integers(0, N, N)
+        fb, h, v = one(idx, f["p"])
+        bi.append(idx); bh.append(h); bw.append(v); bp.append(fb["p"])
+    sh = (n_boot, N)
+    # parameters on an optimiser bound (a tail step of exactly 0, i.e. flat C, is not counted)
+    at_bound = [bool(np.isclose(x, lo) or (hi != 0.0 and np.isclose(x, hi))) for x, (lo, hi) in zip(f["p"], model.bounds())]
+    return dict(model=model, fit=f, w=w, w_ht=w_ht, q=1.0 / w_ht, aic=2 * f["n_par"] - 2 * f["ll"], at_bound=at_bound,
+                boot_p=np.array(bp).reshape(n_boot, model.n_par),
+                boot_idx=np.array(bi, int).reshape(sh), boot_w=np.array(bw).reshape(sh), boot_w_ht=np.array(bh).reshape(sh))
+
+
 # ---------------------------------------------------------------------------
 _W = {}
 
@@ -187,10 +243,20 @@ def true_C(M, d, b, scen, mc):
             Cv = 0.8 * lg(8.0, 0.3) + 0.2 * lg(13.0, 0.3)
         elif sh == "power_tail":   # slow power-law decline, no cut-off
             Cv = np.where(V < 7.0, 1.0, (1.0 + np.maximum(V - 7.0, 0.0)) ** -2.0)
+        elif sh == "real_spline":  # the C(V) fitted to the real data: scen["_spline"] = (nodes, ln C at nodes, tail slope)
+            nd, lc, sl = scen["_spline"]
+            Cv = np.minimum(np.exp(np.where(V > nd[-1], lc[-1] + sl * (V - nd[-1]), np.interp(V, nd, lc))), 1.0)
         else:
             raise ValueError(sh)
     if "b_term" in scen:
         Cv = Cv * (1 - scen["b_term"]["depth"] * np.exp(-np.abs(b) / scen["b_term"]["b0"]))
+    if "window" in scen:   # direction-dependent C inside a sky window (needs l): shallower limit and/or factor
+        wd = scen["window"]
+        inside = sky_region(scen["_l"], b, (wd["L"], wd["B"])) == 1
+        if "V_lim_in" in wd:
+            Cin = 1.0 / (1.0 + np.exp((M - (wd["V_lim_in"] - DM)) / mc["dM"]))
+            Cv = np.where(inside, Cin, Cv)
+        Cv = np.where(inside, Cv * wd.get("factor", 1.0), Cv)
     return Cv
 
 
@@ -353,6 +419,103 @@ def run_mock(cfg, out, plots, workers):
 
 
 # ---------------------------------------------------------------------------
+REGION_KINDS = ("single", "contrast", "contrast_slope", "sep", "single_coarse", "sep_fine")
+
+
+def mock_region_one(args):
+    """One realisation for the direction-dependent C tests: single spline vs regional models."""
+    sname, r = args
+    cfg, pot, frame = _W["cfg"], _W["pot"], _W["frame"]
+    mk = cfg["mock"]; mr = cfg["mock_region"]
+    scen = dict(mr["scenarios"][sname])
+    seed = cfg["seed"] + 7919 * list(mr["scenarios"]).index(sname) + r + 500000
+    rng = np.random.default_rng(seed)
+    ic = sample_population(pot, mk["density"], mk["n_true"], mk["r_trunc"], seed)
+    mixed = np.ones(len(ic), bool)
+    if "clump" in scen:
+        cl = scen["clump"]
+        icc = np.column_stack([np.array(cl["xyz"]) + rng.normal(0, cl["sig_x"], (cl["n"], 3)),
+                               np.array(cl["vxyz"]) + rng.normal(0, cl["sig_v"], (cl["n"], 3))])
+        ic = np.vstack([ic, icc]); mixed = np.r_[mixed, np.zeros(cl["n"], bool)]
+    M = rng.normal(*mk["gclf"], len(ic))
+    lib = integrate_orbits(pot, ic, cfg["orbits"]["integration_time_gyr"], cfg["orbits"]["n_samples"])
+    N, T = lib.xyz.shape[:2]
+    l, b, d = GalactocentricToGalactic(frame)(lib.xyz)
+    p = np.where(mixed, rng.integers(0, T, N), 0); ii = np.arange(N)
+    A = DU.disc_extinction(l, b, d, **scen["dust"]) if "dust" in scen else np.zeros_like(d)
+    scen["_l"] = l[ii, p]
+    det = rng.random(N) < true_C(M + A[ii, p], d[ii, p], b[ii, p], scen, mk["completeness"])
+    reg_t = sky_region(l, b, tuple(mr["window"]))
+    Md = M[det]
+    V_t = CV.apparent_mag(Md, d[det], A[det])
+    V_now = CV.apparent_mag(Md, d[ii, p][det], A[ii, p][det])
+    rt, rn = reg_t[det], reg_t[ii, p][det]
+    fM = Md > -6.5
+    row = dict(scenario=sname, real=r, N_true=int(N), N_obs=int(det.sum()), N_true_faint=int((M > -6.5).sum()),
+               N_obs_inner_now=int(rn.sum()))
+    Mref = cfg.get("vmax_M_ref", -8.0)
+    for kind in mr.get("kinds", REGION_KINDS):
+        try:
+            if kind in ("single", "single_coarse"):   # coarse: node count matched to one region of 'sep'
+                cf = cfg if kind == "single" else dict(cfg, n_min_v=mr["n_min_coarse"])
+                res = analyse_spline(Md, V_t, V_now, cf, mr["n_bootstrap"], rng, Mref)
+                aic, nb = res["aic"], 0
+            elif kind == "sep_fine":                  # separate splines with the single spline's bin size per region
+                res = analyse_region(Md, V_t, V_now, rt, rn, dict(cfg, n_min_v_region=mr["n_min_fine"]),
+                                     mr["n_bootstrap"], rng, Mref, kind="sep")
+                aic, nb = res["aic"], int(np.sum(res["at_bound"]))
+            else:
+                res = analyse_region(Md, V_t, V_now, rt, rn, cfg, mr["n_bootstrap"], rng, Mref, kind=kind)
+                aic, nb = res["aic"], int(np.sum(res["at_bound"]))
+            for est, w, bw in (("ht", res["w_ht"], res["boot_w_ht"]), ("vmax", res["w"], res["boot_w"])):
+                bt = np.array([x.sum() for x in bw]); bf = np.array([x[fM[ix]].sum() for x, ix in zip(bw, res["boot_idx"])])
+                row.update({f"{kind}_{est}_tot": w.sum(), f"{kind}_{est}_faint": w[fM].sum(),
+                            f"{kind}_{est}_tot_p16": np.percentile(bt, 16), f"{kind}_{est}_tot_p84": np.percentile(bt, 84),
+                            f"{kind}_{est}_faint_p16": np.percentile(bf, 16), f"{kind}_{est}_faint_p84": np.percentile(bf, 84)})
+            row[f"{kind}_aic"] = aic; row[f"{kind}_nbound"] = nb
+        except Exception as exc:   # e.g. too few clusters in a region at present
+            row[f"{kind}_error"] = repr(exc)[:120]
+    return row
+
+
+def run_mock_region(cfg, out, workers):
+    mr = cfg["mock_region"]
+    tasks = [(s, r) for s in mr["scenarios"] for r in range(mr["n_realisations"])]
+    rows = []
+    with ProcessPoolExecutor(workers, mp_context=mp.get_context("fork"), initializer=_init, initargs=(cfg,)) as ex:
+        for k, row in enumerate(ex.map(mock_region_one, tasks)):
+            rows.append(row)
+            if (k + 1) % 50 == 0:
+                print(f"[mock_region] {k + 1}/{len(tasks)}", flush=True)
+    Tt = pd.DataFrame(rows)
+    tag = mr.get("tag", "")
+    Tt.to_csv(out / f"mock_region_totals{tag}.csv", index=False)
+    summ = []
+    for sname, g in Tt.groupby("scenario", sort=False):
+        d = dict(scenario=sname, N_obs=g.N_obs.mean(), N_inner_now=g.N_obs_inner_now.mean())
+        for kind in [k for k in REGION_KINDS if f"{k}_ht_tot" in g]:
+            for est in ("ht", "vmax"):
+                c = f"{kind}_{est}"
+                if f"{c}_tot" not in g:
+                    continue
+                ok = g[f"{c}_tot"].notna()
+                d[f"{c}_tot"] = np.median(g[f"{c}_tot"][ok] / g.N_true[ok])
+                d[f"{c}_faint"] = np.median(g[f"{c}_faint"][ok] / g.N_true_faint[ok])
+                d[f"{c}_cov"] = np.mean((g.N_true[ok] >= g[f"{c}_tot_p16"][ok]) & (g.N_true[ok] <= g[f"{c}_tot_p84"][ok]))
+            if kind != "single" and f"{kind}_aic" in g:
+                dA = g[f"{kind}_aic"] - g["single_aic"]
+                d[f"{kind}_AICpref"] = np.mean(dA[dA.notna()] < 0)
+                d[f"{kind}_bound"] = np.mean(g[f"{kind}_nbound"] > 0)
+            if f"{kind}_error" in g:
+                d[f"{kind}_nerr"] = int(g[f"{kind}_error"].notna().sum())
+        summ.append(d)
+    S = pd.DataFrame(summ)
+    S.to_csv(out / f"mock_region_summary{tag}.csv", index=False)
+    with pd.option_context("display.width", 250, "display.max_columns", 80):
+        print(S.round(2).to_string(index=False))
+
+
+# ---------------------------------------------------------------------------
 def run_real(cfg, out, plots):
     _init(cfg)
     base = yaml.safe_load(open(cfg["catalog_config"]))
@@ -445,8 +608,56 @@ def run_real(cfg, out, plots):
         print(f"[real] spline C(V), {lab_}: " + ", ".join(f"{cn} {v[0]:.0f} [{v[1]:.0f}-{v[2]:.0f}]"
                                                         for cn, v in ((cn, summ['spline'][f'{key}_{cn}']) for cn in classes)))
     print(f"[real] spline AIC {sp['aic']:.1f} (binned {res['aic_cv']:.1f}); C at nodes {np.round(summ['spline']['C_nodes'], 3)}")
+    # direction-dependent C: region 1 = inner window (fixed before fitting), region 0 = rest (anchor)
+    from scipy.stats import kstest
+    l_r, b_r, _ = GalactocentricToGalactic(_W["frame"])(lib.xyz)
+    reg_t = sky_region(l_r, b_r, tuple(cfg.get("region_window", [30.0, 15.0])))
+    reg_now = reg_t[:, 0]
+    fr = reg_t.mean(1)
+    summ["region"] = {"window_deg": cfg.get("region_window", [30.0, 15.0]), "n_now_inner": int(reg_now.sum()),
+                      "n_orbits_always_inner": int((fr == 1).sum()), "n_orbits_never_inner": int((fr == 0).sum()),
+                      "n_orbits_crossing_0.1_0.9": int(((fr > 0.1) & (fr < 0.9)).sum())}
+    lnC_single = CV.lnC_spline(res["V_t"], sp["nodes"], sp["fit"]["p"])
+    u = phase_pit(d_t, d_now, lnC_single)
+    summ["region"]["single"] = {"AIC": sp["aic"], "PIT_KS_p": {f"region{k}": float(kstest(u[reg_now == k], "uniform").pvalue) for k in (0, 1)},
+                                "PIT_median": {f"region{k}": float(np.median(u[reg_now == k])) for k in (0, 1)}}
+    reg_w, reg_boot = {}, {}
+    for kind in ("contrast", "contrast_slope", "sep"):
+        rr = analyse_region(M, res["V_t"], res["V_now"], reg_t, reg_now, cfg, cfg["n_bootstrap"],
+                            np.random.default_rng(cfg["seed"] + 17), cfg.get("vmax_M_ref", -8.0), kind=kind)
+        mdl, p_ = rr["model"], rr["fit"]["p"]
+        Vg = np.arange(4.0, 17.01, 0.5)
+        lc = {k: mdl.lnC(Vg, np.full(len(Vg), k), p_) for k in (0, 1)}
+        bl = np.array([mdl.lnC(Vg, np.ones(len(Vg), int), pb) - mdl.lnC(Vg, np.zeros(len(Vg), int), pb) for pb in rr["boot_p"]])
+        u = phase_pit(d_t, d_now, mdl.lnC(res["V_t"], reg_t, p_))
+        e_ = {"AIC": rr["aic"], "dAIC_vs_single": rr["aic"] - sp["aic"], "k": mdl.n_par, "lnL": rr["fit"]["ll"],
+              "fit_success": rr["fit"]["success"], "n_at_bound": int(np.sum(rr["at_bound"])), "p": p_.tolist(),
+              "V_grid": Vg.tolist(), "C_outer": np.exp(lc[0]).tolist(), "C_inner": np.exp(lc[1]).tolist(),
+              "ln_inner_minus_outer_p16": np.percentile(bl, 16, 0).tolist(), "ln_inner_minus_outer_p84": np.percentile(bl, 84, 0).tolist(),
+              "max_C": float(np.exp(max(lc[0].max(), lc[1].max()))),
+              "PIT_KS_p": {f"region{k}": float(kstest(u[reg_now == k], "uniform").pvalue) for k in (0, 1)},
+              "PIT_median": {f"region{k}": float(np.median(u[reg_now == k])) for k in (0, 1)}}
+        rht = dict(rr, w=rr["w_ht"], boot_w=rr["boot_w_ht"])
+        for lab_, r_, key in (("1/q", rht, "ht"), ("1/V_max", rr, "vmax")):
+            for cn, fn_ in classes.items():
+                b_ = boot_sum(M, r_, fn_)
+                e_[f"{key}_{cn}"] = [float(r_["w"][fn_(M)].sum()), float(np.percentile(b_, 16)), float(np.percentile(b_, 84))]
+            for cn, cv_ in (("feh<-1", 0), ("feh>=-1", 1)):
+                b_ = boot_sum(feh, r_, (lambda x, cv_=cv_: np.isfinite(x) & ((x >= -1) == bool(cv_))))
+                okf = np.isfinite(feh) & ((feh >= -1) == bool(cv_))
+                e_[f"{key}_{cn}"] = [float(r_["w"][okf].sum()), float(np.percentile(b_, 16)), float(np.percentile(b_, 84))]
+            for k in (0, 1):
+                e_[f"{key}_now_region{k}"] = float(r_["w"][reg_now == k].sum())
+            print(f"[real] region {kind} {lab_}: " + ", ".join(f"{cn} {e_[f'{key}_{cn}'][0]:.0f} [{e_[f'{key}_{cn}'][1]:.0f}-{e_[f'{key}_{cn}'][2]:.0f}]"
+                                                             for cn in classes))
+        print(f"[real] region {kind}: AIC {rr['aic']:.1f} (single spline {sp['aic']:.1f}); bound hits {e_['n_at_bound']}; "
+              f"PIT KS p {e_['PIT_KS_p']}; single PIT KS p {summ['region']['single']['PIT_KS_p']}")
+        summ["region"][kind] = e_
+        reg_w[f"w_reg_{kind}"], reg_w[f"w_reg_{kind}_vmax"] = rr["w_ht"], rr["w"]
+        reg_boot[f"{kind}_idx"], reg_boot[f"{kind}_w"], reg_boot[f"{kind}_w_vmax"] = rr["boot_idx"], rr["boot_w_ht"], rr["boot_w"]
+    np.savez_compressed(out / f"real_cv_region_boot{tag}.npz", **reg_boot)
     json.dump(summ, open(out / f"real_cv_summary{tag}.json", "w"), indent=2)
-    pd.DataFrame({"name": c["name"], "M_V": M, "feh": feh, "d": d_now,
+    pd.DataFrame({"name": c["name"], "M_V": M, "feh": feh, "d": d_now, "region_now": reg_now, **reg_w,
                   "A_V_now": A_V[:, 0] if np.ndim(A_V) == 2 else A_V, "V_now": res["V_now"], "q": res["q"],
                   "w": res["w"], "w_spline": sp["w_ht"], "w_vmax": sp["w"], "w_vmax_fehsplit": spf["w"]}).to_csv(out / f"real_cv_weights{tag}.csv", index=False)
     np.savez_compressed(out / f"real_cv_boot{tag}.npz", boot_idx=res["boot_idx"], boot_w=res["boot_w"],
@@ -513,22 +724,30 @@ def run_real(cfg, out, plots):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/cv.yaml")
-    ap.add_argument("--mode", choices=["mock", "real"], required=True)
+    ap.add_argument("--mode", choices=["mock", "mock_region", "real"], required=True)
     ap.add_argument("--n-real", type=int, default=None)
     ap.add_argument("--n-boot", type=int, default=None)
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--extinction", choices=["none", "present_ebv", "map_low", "map_high"], default=None)
+    ap.add_argument("--region-control", action="store_true", help="mock_region: node-count controls only")
     a = ap.parse_args()
     cfg = yaml.safe_load(open(a.config))
     if a.n_real:
-        cfg["mock"]["n_realisations"] = a.n_real
+        cfg["mock"]["n_realisations"] = cfg["mock_region"]["n_realisations"] = a.n_real
     if a.n_boot is not None:
-        cfg["mock"]["n_bootstrap"] = cfg["n_bootstrap"] = a.n_boot
+        cfg["mock"]["n_bootstrap"] = cfg["mock_region"]["n_bootstrap"] = cfg["n_bootstrap"] = a.n_boot
+    if a.region_control:
+        cfg["mock_region"].update(kinds=["single", "single_coarse", "sep_fine"], tag="_control")
     if a.extinction:
         cfg["extinction"] = a.extinction
     out = Path(cfg["output_dir"]); out.mkdir(parents=True, exist_ok=True)
     plots = Path(cfg["plots_dir"]); plots.mkdir(parents=True, exist_ok=True)
-    (run_mock(cfg, out, plots, a.workers) if a.mode == "mock" else run_real(cfg, out, plots))
+    if a.mode == "mock":
+        run_mock(cfg, out, plots, a.workers)
+    elif a.mode == "mock_region":
+        run_mock_region(cfg, out, a.workers)
+    else:
+        run_real(cfg, out, plots)
 
 
 if __name__ == "__main__":

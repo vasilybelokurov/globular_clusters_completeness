@@ -1,0 +1,52 @@
+ask-codex: target=dir effort=high diff=0 bytes repo=/Users/vasilybelokurov/IoA Dropbox/Dr V.A. Belokurov/Code/globular_clusters_completeness git=0
+ask-codex: review saved to outputs/codex/faint_plan_review.md (55s, effort high)
+
+The premise is consistent with the code: it computes own-orbit \(1/q\) weights and a \(1/V_{\max}\)-style estimate using a \(1/q\)-weighted bright-cluster orbit population. The latter assumes orbit distribution is independent of luminosity; the code also supports splitting that population by metallicity. (`scripts/run_cv.py:131–154`; `gc_completeness/cv.py:163–174`)
+
+## Adversarial critique
+
+1. **The \(R\approx1\) decision rule is too strong.** If a reasonable tail variant moves \(R\) toward 1, that shows the comparison is sensitive to the completeness model; it does not show the shared-orbit assumption is true or make the orbit interpretation irrelevant. A ratio near 1 can also arise from low power or offsetting biases. The spline extrapolates its final slope beyond the last data-derived node, constrained only to be nonpositive, and the existing bootstrap refits its parameters while holding those node locations fixed. (`gc_completeness/cv.py:109–113`, `gc_completeness/cv.py:134–160`; `scripts/run_cv.py:139–164`) Treat \(R\) as a diagnostic statistic: judge its null false-positive rate and power under pre-specified orbit-trend alternatives, then report how it changes across tail assumptions.
+
+2. **The apocentre comparison is useful but not independent confirmation.** The extra statistic you supplied—weighted medians 14.1 versus 5.8 kpc, against unweighted medians 10.3 versus 9.0 kpc and KS \(p=0.25\)—is suggestive, but it is not a separate test of the weighting model. The own-orbit weights depend on the fitted completeness curve, while the apocentres are finite-time sampled orbit maxima: the library defines `rapo` as the maximum radius over its samples. (`scripts/run_cv.py:143–154`; `gc_completeness/orbits.py:15–25`, `gc_completeness/orbits.py:95–109`) Keep raw and weighted distributions, report weight concentration and uncertainty, and call this evidence about supported orbits. I have not reproduced the supplied statistics.
+
+3. **Calibrate intervals before using the proposed acceptance threshold.** The 63–73% coverage band is not a useful pass criterion until its uncertainty and the mock design are specified. The writeup reports 53–70% coverage for the existing \(1/V_{\max}\) mock intervals. (`writeup/gc_completeness.tex:581–590`) The current spline bootstrap fixes node placement, so resampling node placement is a reasonable calibration candidate, but it is not guaranteed to fix coverage. (`scripts/run_cv.py:139–164`) Compare interval methods on calibration mocks, then evaluate them on independent validation mocks; report simulation uncertainty on coverage. The configured 100 realisations are too few to make a narrow coverage band decisive. (`configs/cv.yaml:16–19`)
+
+4. **Keep luminosity-matched \(1/V_{\max}\) as a mock comparator, not a default answer.** It is worth testing whether a local luminosity reference reduces bias, but it introduces bandwidth or reference-range choices and uses a selected reference sample. The current implementation uses clusters brighter than a threshold, with optional metallicity grouping; it has no luminosity-matched orbit estimator. (`scripts/run_cv.py:131–137`, `scripts/run_cv.py:147–154`) Include pre-specified versions in mocks and compare bias, variance, coverage, and support. Do not promote one to the real-data estimate unless it performs well on held-out mocks and its reference sample has adequate effective size.
+
+5. **Revise the forward-model gate.** “Only if all three estimators fail” ties model development to a particular scorecard and risks selecting the model on the same mocks used to assess it. A forward model is the appropriate route if the target is an intrinsic luminosity–orbit trend, but it needs its own null-versus-trend recovery and coverage criteria, tested on held-out mocks and across plausible DF assumptions. Its unseen-orbit abundance remains assumption-dependent: the current estimators’ orbit populations come from detected clusters. (`scripts/run_cv.py:131–154`; `gc_completeness/cv.py:163–174`)
+
+6. **Do not use per-cluster mock calibration as a generic real-data correction.** A mock-derived correction would depend on the simulated orbit population, completeness, and extinction assumptions. Use mocks to assess estimator bias and uncertainty; apply a bias correction only under an explicit population model and validate it on held-out scenarios.
+
+## Corrected plan
+
+1. **Define the target and estimands first.** Fix the faint cut, define \(R\) as the ratio of faint totals from the same completeness fit and same resampled clusters, and distinguish the total-count question from the luminosity–orbit-trend question. The current fit computes both \(1/q\) and \(1/V_{\max}\) weights, and the real analysis also computes metallicity-split references. (`scripts/run_cv.py:131–164`, `scripts/run_cv.py:574–592`)
+
+2. **Audit sensitivity and sampling uncertainty.** Recompute \(R\) for both extinction-map brackets, all-cluster and per-metallicity references, and pre-specified tail variants. Use paired cluster resamples for both estimators and each \(R\); report intervals, bright-reference effective sample size, and maximum normalized weight. Include node-placement uncertainty as a separate bootstrap variant, since the current spline bootstrap fixes the original nodes. (`scripts/run_cv.py:139–164`, `scripts/run_cv.py:533–537`, `scripts/run_cv.py:578–590`) Treat a shift toward one as evidence of model sensitivity, not as a decision to accept the shared-orbit assumption.
+
+3. **Report the apocentre diagnostic with its limits.** Show raw and \(1/q\)-weighted faint and bright distributions, weighted quantiles or a distribution distance, effective sample sizes, and uncertainty that refits completeness. Interpret it as a comparison among detected orbit families; the stored apocentres are maxima over a finite set of integrated samples. (`gc_completeness/orbits.py:15–25`, `gc_completeness/orbits.py:95–109`)
+
+4. **Calibrate before comparing methods.** Preserve the null mocks and add pre-specified luminosity-dependent orbit cases. The current generator draws one phase-space population, then draws magnitudes independently; its sampler fixes isotropic velocity anisotropy. (`scripts/run_cv.py:260–280`; `gc_completeness/mocks.py:11–27`) Match the relevant observed sample size and detection process, and include extinction and tail misspecification controls. Evaluate interval calibration on calibration mocks and held-out validation mocks; report finite-mock uncertainty. Set recovery and coverage tolerances before looking at validation results. Assess \(R\)’s null false-positive rate and power for each trend strength.
+
+5. **Compare candidate estimators on those mocks.** Include \(1/q\), bright-reference \(1/V_{\max}\), and a small set of pre-specified luminosity-matched references. Report faint and total bias, variance, interval coverage, and \(R\) distributions. Do not require every estimator to pass in scenarios where its assumptions are deliberately violated; state which scenarios each method targets. The existing test covers one toy \(1/V_{\max}\) recovery case, not luminosity-dependent orbit populations. (`tests/test_khoperskov.py:274–294`)
+
+6. **Fit a forward model if the intrinsic trend remains the target.** Compare a null model to a low-dimensional luminosity trend in an externally specified DF-generated orbit library, with the selection integral over luminosity, orbit, and phase. Test parameter recovery, interval coverage, and sensitivity to DF assumptions on held-out mocks. Do not interpret unobservable orbit families as empirically measured.
+
+7. **Report what the data support.** Give the observed estimates, paired bootstrap intervals, extinction and tail sensitivity, mock-calibrated limitations, and the weighted apocentre diagnostic. If results depend materially on tail or DF assumptions, report that dependence; do not turn a mock-specific correction into an assumption-free real-data estimate.
+
+## Verified and assumed
+
+**Verified by reading the code:** the \(1/q\) and bright-reference \(1/V_{\max}\) calculations, the optional metallicity grouping, the data-derived spline nodes and constrained tail extrapolation, the fixed-node spline bootstrap, the independent-luminosity mock design, the isotropic mock sampler, and the finite-sampled apocentre definition. (Citations are given above.) The writeup reports 53–70% coverage for existing \(1/V_{\max}\) mock intervals. (`writeup/gc_completeness.tex:581–590`)
+
+**Assumed from your prompt:** the specific \(R=0.85\), apocentre medians, \(N\) values, unweighted medians, KS \(p\)-value, and the quoted mock rms and coverage for “all estimators.” I did not recompute those results or inspect the saved analysis outputs.
+
+## Strongest argument against this critique
+
+The weighted apocentre contrast and \(R<1\) point in the same direction, and the writeup says the observed ratio is uncommon in some null mock scenarios. (`writeup/gc_completeness.tex:644–652`) If the completeness tail and bright-reference weights prove stable under the proposed sensitivity checks, and calibrated mocks show power to distinguish the supplied apocentre shift, the data could provide meaningful evidence for a luminosity–orbit relation. At present, the supplied raw medians and KS result do not establish that.
+
+## What I would need to check to be sure
+
+- Reproduce \(R\), its paired bootstrap distribution, and the supplied apocentre statistics from the saved outputs.
+- Check tail-node support, optimizer status, and how node-placement resampling changes interval calibration. The fit success flag and fitted tail slope are recorded by the analysis. (`scripts/run_cv.py:595–600`)
+- Quantify reference-weight concentration and whether luminosity-matched references have sufficient support.
+- Run null and trend mocks with held-out calibration, including uncertainty on coverage and the power of the \(R\) and apocentre diagnostics.
+- Test sensitivity to potential, orbit integration, and extinction uncertainty, which the writeup identifies as unpropagated limitations. (`writeup/gc_completeness.tex:671–680`)

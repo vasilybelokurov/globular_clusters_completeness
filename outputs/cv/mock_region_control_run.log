@@ -1,0 +1,25 @@
+[mock_region] 50/800
+[mock_region] 100/800
+[mock_region] 150/800
+[mock_region] 200/800
+[mock_region] 250/800
+[mock_region] 300/800
+[mock_region] 350/800
+[mock_region] 400/800
+[mock_region] 450/800
+[mock_region] 500/800
+[mock_region] 550/800
+[mock_region] 600/800
+[mock_region] 650/800
+[mock_region] 700/800
+[mock_region] 750/800
+[mock_region] 800/800
+         scenario  N_obs  N_inner_now  single_ht_tot  single_ht_faint  single_ht_cov  single_vmax_tot  single_vmax_faint  single_vmax_cov  single_coarse_ht_tot  single_coarse_ht_faint  single_coarse_ht_cov  single_coarse_vmax_tot  single_coarse_vmax_faint  single_coarse_vmax_cov  single_coarse_AICpref  single_coarse_bound  single_coarse_nerr  sep_fine_ht_tot  sep_fine_ht_faint  sep_fine_ht_cov  sep_fine_vmax_tot  sep_fine_vmax_faint  sep_fine_vmax_cov  sep_fine_AICpref  sep_fine_bound
+         A_C_of_V 120.19        64.11           0.86             0.80           0.56             0.88               0.94             0.60                  1.01                    0.80                  0.59                    1.09                      0.94                    0.60                   0.42                  0.0                   0             0.95               0.88             0.63               0.94                 0.96               0.61              0.06             0.0
+     F_two_survey 144.12        72.63           1.18             0.97           0.63             1.10               0.98             0.63                  1.09                    1.08                  0.68                    1.04                      1.00                    0.70                   0.84                  0.0                   0             1.07               0.98             0.69               1.02                 0.98               0.69              0.08             0.0
+   H_window_shape  74.51        18.69           0.88             0.60           0.54             0.94               0.90             0.57                  1.16                    0.86                  0.55                    1.29                      1.16                    0.45                   0.41                  0.0                  78             0.90               0.51             0.61               0.95                 0.78               0.66              0.97             0.0
+  I_window_factor  87.82        32.31           0.84             0.69           0.58             0.93               1.01             0.57                  1.03                    0.75                  0.55                    1.13                      0.94                    0.53                   0.36                  0.0                  15             0.94               0.78             0.72               0.91                 0.90               0.68              0.47             0.0
+J_window_mismatch  70.98        28.34           1.16             0.72           0.62             1.10               0.93             0.61                  1.27                    0.59                  0.50                    1.27                      0.80                    0.67                   0.67                  0.0                  88             1.05               0.61             0.63               1.07                 0.87               0.60              0.50             0.0
+       B_latitude  96.62        44.04           0.86             0.75           0.61             0.92               0.89             0.69                  0.92                    0.64                  0.49                    1.01                      0.82                    0.56                   0.27                  0.0                   0             0.95               0.73             0.61               0.89                 0.87               0.65              0.11             0.0
+           E_dust  67.07        20.99           0.81             0.53           0.54             0.90               0.78             0.59                  1.17                    0.69                  0.50                    1.39                      0.90                    0.50                   0.50                  0.0                  96             0.83               0.52             0.54               0.86                 0.74               0.55              0.12             0.0
+      C_sgr_clump 122.29        65.96           0.89             0.68           0.64             0.93               0.94             0.63                  0.92                    0.61                  0.52                    0.98                      0.84                    0.58                   0.53                  0.0                   0             0.98               0.74             0.73               1.02                 0.92               0.69              0.18             0.0

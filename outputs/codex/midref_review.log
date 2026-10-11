@@ -1,0 +1,46 @@
+ask-codex: target=dir effort=high diff=0 bytes repo=/Users/vasilybelokurov/IoA Dropbox/Dr V.A. Belokurov/Code/globular_clusters_completeness git=0
+ask-codex: review saved to outputs/codex/midref_review.md (66s, effort high)
+
+## Assessment
+
+**Midref is a defensible exploratory estimator, but it is not established as the preferred estimator. Given the results in your packet, its apparent advantage is too small and too design-dependent to justify making it the headline.** It is not a fudge in the sense of being fitted to the validation scores: it is a defined plug-in estimator. But it uses a piecewise reference-population assumption whose boundary choices need independent validation.
+
+The code implements the definition you gave: targets at or above the faint cut use the intermediate sample, weighted by \(1/q\); other targets use the bright sample. The intermediate sample is itself selected, so this remains a detected-orbit reference rather than an independently known intrinsic population. ([faint.py:43–57](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/gc_completeness/faint.py:43))
+
+**The strongest concern is mock alignment.** The mock generator assigns luminosity classes at the same \(-8\) and \(-6.5\) boundaries used by midref, then scales the classes’ density break radii by \(s^0\), \(s^{0.5}\), and \(s^1\). That makes midref’s intermediate reference structurally well placed for these particular step-trend alternatives. Its lower bias in those scenarios does not establish that it performs best for a smooth luminosity trend or different class boundaries. ([mock_faint.py:45–52](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/scripts/mock_faint.py:45); [cv.yaml:82–90](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/configs/cv.yaml:82))
+
+The history you supplied mitigates some forking-path concerns: you say the cuts predate this study, the candidates and tolerances were specified before the run, and the mock design changed after a smoke test of detection counts alone. The config records the cuts, tolerances, and that design change. ([cv.yaml:54–58](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/configs/cv.yaml:54); [cv.yaml:67–80](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/configs/cv.yaml:67)) I cannot verify that chronology from the code. Changing the truth to match observed counts is a reasonable relevance choice, but it makes validation conditional on a data-matched mock design; it does not validate performance outside that design.
+
+A further distinction: the script reports each estimator’s validation bias, RMS, and coverage, but does not calculate paired estimator differences or their uncertainty, nor does it automatically apply the configured median-bias tolerances as a pass/fail gate. ([mock_faint.py:121–144](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/scripts/mock_faint.py:121)) The supplied differences of roughly 0.05–0.15 in median log error therefore do not show a reliable ranking by themselves. Your concern about their size relative to the run-to-run scatter is plausible, but I have not recomputed its uncertainty.
+
+## What would settle it fairly
+
+Keep the estimator definitions and thresholds fixed, then run a fresh validation set with:
+
+- Smooth luminosity trends in the orbit distribution, plus trend shapes and transition points that do not coincide with \(-8\) and \(-6.5\).
+- Paired comparisons on each simulated realization: compare estimators’ log errors on the *same* realization, and bootstrap realizations jointly to get uncertainty on median paired differences.
+- A predeclared rule for choosing an estimator, or no winner selection at all. If a method is chosen after inspecting validation results, those results become development data; a further held-out set is needed for an unbiased final comparison.
+
+The existing cluster bootstrap resamples detected clusters within one realization and recomputes the estimates. It does not estimate uncertainty in the median performance across mock realizations. ([faint.py:81–100](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/gc_completeness/faint.py:81); [mock_faint.py:121–144](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/scripts/mock_faint.py:121)) Also report performance by scenario rather than letting a pooled score conceal cases where the reference-population assumption fails.
+
+## Headline
+
+I would use **HT as the main count estimate and report the other estimators as sensitivity estimates**, with the full spread stated. From the figures in your packet, the total-count estimates span 393–432; the faint estimates span 177–208. Midref’s 402 total and 186 faint are inside that spread, and its real-data difference from HT is small relative to the stated intervals. Those numbers are from your packet, not independently reproduced here. I would not report a model average: no averaging rule or model probabilities have been justified.
+
+## Verified versus assumed
+
+**Verified by reading the code:** the midref and kernel calculations are implemented as described; midref switches the faint targets to the intermediate reference population, while kernel uses luminosity-dependent weights. ([faint.py:43–59](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/gc_completeness/faint.py:43)) The mock trend is a three-class step design with boundaries aligned to midref. ([mock_faint.py:45–52](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/scripts/mock_faint.py:45); [cv.yaml:82–90](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/configs/cv.yaml:82)) The script splits realizations into calibration and validation sets by index and summarizes validation metrics per scenario and estimator. ([mock_faint.py:62–63](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/scripts/mock_faint.py:62); [mock_faint.py:108–144](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/scripts/mock_faint.py:108)) Existing tests cover a toy bright-reference recovery and a kernel limiting case, not midref’s accuracy under smooth or boundary-shifted trends. ([test_khoperskov.py:275–294](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/tests/test_khoperskov.py:275); [test_khoperskov.py:365–371](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/tests/test_khoperskov.py:365))
+
+**Assumed from your packet:** the stated chronology, mock results, real-data estimates and intervals, and the claim that the smoke test exposed only detection-count mismatch. I did not rerun the analyses. The earlier reviews are stale on the current implementation: they describe mocks without luminosity-dependent populations and no luminosity-matched estimator, while the current files include both. ([faint_plan_review.md:11](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/outputs/codex/faint_plan_review.md:11); [faint_estimator_review.md:19](/Users/vasilybelokurov/IoA%20Dropbox/Dr%20V.A.%20Belokurov/Code/globular_clusters_completeness/outputs/codex/faint_estimator_review.md:19))
+
+## Strongest argument against my conclusion
+
+The trend scenarios were meant to represent plausible orbit changes across luminosity classes, and midref performs well on the supplied validation results, including the dust case. If those step changes are a reasonable scientific approximation and the target is robust counts under those conditions, dismissing midref because its bins align with the mock classes could undervalue a useful estimator. The problem is that the current evidence does not establish that those conditions cover the plausible alternatives.
+
+## What I would need to check to be sure
+
+- Recompute paired mock differences and bootstrap their medians over realizations.
+- Run a fresh validation with smooth trends and offset transition points.
+- Check mock performance and reference-weight concentration across those scenarios.
+- Verify the reported real-data estimates and intervals from the saved outputs.
+- Inspect whether the intermediate reference has adequate effective sample size and whether faint targets near the \(-6.5\) switch are sensitive to that discontinuity.

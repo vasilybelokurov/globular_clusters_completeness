@@ -1,0 +1,55 @@
+[mock_faint] 100/1400
+[mock_faint] 200/1400
+[mock_faint] 300/1400
+[mock_faint] 400/1400
+[mock_faint] 500/1400
+[mock_faint] 600/1400
+[mock_faint] 700/1400
+[mock_faint] 800/1400
+[mock_faint] 900/1400
+[mock_faint] 1000/1400
+[mock_faint] 1100/1400
+[mock_faint] 1200/1400
+[mock_faint] 1300/1400
+[mock_faint] 1400/1400
+estimator  part  mode  k68   n
+       ht   tot fixed 0.95 700
+       ht   tot nodes 0.98 700
+       ht faint fixed 0.96 700
+       ht faint nodes 0.96 700
+     vmax   tot fixed 0.97 700
+     vmax   tot nodes 1.03 700
+     vmax faint fixed 0.93 700
+     vmax faint nodes 0.97 700
+   midref   tot fixed 0.97 700
+   midref   tot nodes 1.02 700
+   midref faint fixed 0.96 700
+   midref faint nodes 0.98 700
+   kernel   tot fixed 0.94 700
+   kernel   tot nodes 0.99 700
+   kernel faint fixed 0.92 700
+   kernel faint nodes 0.96 700
+    scenario  N_obs  N_obs_faint  R_median  P_R_lt_real  dlnrapo_w_median  dlnrapo_median  dlnrapo_true
+     N0_real 167.03        53.88      0.98         0.20              0.03           -0.09         -0.04
+N0_real_dust 125.71        40.11      0.99         0.14             -0.08           -0.08         -0.03
+ N0_logistic  93.16        11.85      1.24         0.08             -0.40           -0.20          0.02
+N0_powertail  84.47        10.05      0.89         0.44              0.48            0.17          0.03
+     T2_real 157.36        47.46      0.90         0.41              0.61            0.38          0.53
+     T4_real 147.97        42.38      0.77         0.67              1.19            0.80          1.11
+T4_real_dust 119.30        35.20      0.88         0.41              1.16            0.70          1.20
+    scenario  ht_tot_medln  ht_tot_rmsln  ht_tot_cov_fixed  ht_tot_cov_nodes  ht_tot_cov_nodes_infl  vmax_tot_medln  vmax_tot_rmsln  vmax_tot_cov_fixed  vmax_tot_cov_nodes  vmax_tot_cov_nodes_infl  midref_tot_medln  midref_tot_rmsln  midref_tot_cov_fixed  midref_tot_cov_nodes  midref_tot_cov_nodes_infl  kernel_tot_medln  kernel_tot_rmsln  kernel_tot_cov_fixed  kernel_tot_cov_nodes  kernel_tot_cov_nodes_infl
+     N0_real         -0.06          0.61              0.72              0.70                   0.71           -0.14            0.45                0.65                0.73                     0.70             -0.09              0.59                  0.70                  0.73                       0.72             -0.07              0.61                  0.71                  0.71                       0.72
+N0_real_dust          0.05          0.36              0.63              0.70                   0.69            0.02            0.38                0.65                0.70                     0.68              0.02              0.36                  0.64                  0.72                       0.69              0.05              0.36                  0.62                  0.69                       0.70
+ N0_logistic         -0.13          0.43              0.65              0.64                   0.63           -0.08            0.49                0.68                0.69                     0.67             -0.05              0.45                  0.68                  0.69                       0.68             -0.11              0.43                  0.67                  0.63                       0.63
+N0_powertail          0.12          1.05              0.66              0.67                   0.63            0.00            0.58                0.71                0.68                     0.73              0.06              0.59                  0.71                  0.69                       0.71              0.12              1.05                  0.66                  0.68                       0.65
+     T2_real          0.06          0.50              0.63              0.66                   0.71           -0.08            0.47                0.65                0.66                     0.70             -0.05              0.47                  0.65                  0.68                       0.73              0.06              0.50                  0.62                  0.65                       0.71
+     T4_real          0.13          0.52              0.68              0.72                   0.75           -0.03            0.49                0.64                0.69                     0.67              0.03              0.47                  0.67                  0.73                       0.71              0.13              0.52                  0.68                  0.72                       0.78
+T4_real_dust          0.12          0.44              0.69              0.72                   0.77            0.02            0.40                0.72                0.79                     0.78              0.07              0.39                  0.69                  0.75                       0.75              0.12              0.44                  0.69                  0.72                       0.77
+    scenario  ht_faint_medln  ht_faint_rmsln  ht_faint_cov_fixed  ht_faint_cov_nodes  ht_faint_cov_nodes_infl  vmax_faint_medln  vmax_faint_rmsln  vmax_faint_cov_fixed  vmax_faint_cov_nodes  vmax_faint_cov_nodes_infl  midref_faint_medln  midref_faint_rmsln  midref_faint_cov_fixed  midref_faint_cov_nodes  midref_faint_cov_nodes_infl  kernel_faint_medln  kernel_faint_rmsln  kernel_faint_cov_fixed  kernel_faint_cov_nodes  kernel_faint_cov_nodes_infl
+     N0_real           -0.12            0.72                0.69                0.69                     0.70             -0.16              0.58                  0.64                  0.70                       0.71               -0.13                0.74                    0.70                    0.73                         0.73               -0.12                0.73                    0.68                    0.69                         0.70
+N0_real_dust            0.10            0.46                0.68                0.70                     0.68              0.01              0.46                  0.64                  0.68                       0.69                0.04                0.44                    0.68                    0.73                         0.71                0.09                0.45                    0.66                    0.74                         0.67
+ N0_logistic           -0.35            0.74                0.56                0.60                     0.59             -0.16              0.70                  0.63                  0.66                       0.62               -0.19                0.66                    0.60                    0.63                         0.66               -0.31                0.68                    0.59                    0.63                         0.60
+N0_powertail            0.15            1.36                0.67                0.70                     0.62             -0.09              0.80                  0.71                  0.73                       0.70               -0.01                0.82                    0.68                    0.74                         0.75                0.14                1.30                    0.66                    0.71                         0.66
+     T2_real            0.07            0.64                0.63                0.65                     0.68             -0.17              0.59                  0.68                  0.66                       0.69               -0.04                0.58                    0.66                    0.70                         0.70                0.02                0.62                    0.62                    0.68                         0.70
+     T4_real            0.15            0.68                0.69                0.73                     0.73             -0.14              0.61                  0.65                  0.69                       0.64               -0.02                0.56                    0.70                    0.76                         0.77                0.09                0.65                    0.71                    0.77                         0.74
+T4_real_dust            0.13            0.55                0.75                0.70                     0.75             -0.01              0.48                  0.73                  0.77                       0.77                0.05                0.46                    0.75                    0.78                         0.76                0.10                0.53                    0.76                    0.71                         0.76

@@ -1,0 +1,49 @@
+[audit] none     T0_baseline    all: R 0.61 [0.45-0.81] nodes-boot [0.44-0.82]  faint 1/q 527  vmax 322  midref 295  kernel 497  ESS 32.1 maxw 0.07
+[audit] none     T0_baseline    feh: R 0.59 [0.44-0.79] nodes-boot [0.42-0.80]  faint 1/q 527  vmax 309  midref 295  ESS 32.1 maxw 0.07
+[audit] none     T1_extra_node  all: R 0.60 [0.43-0.80]  faint 1/q 508  vmax 304  midref 278  ESS 32.1 maxw 0.07
+[audit] none     T1_extra_node  feh: R 0.58 [0.42-0.78]  faint 1/q 508  vmax 292  midref 278  ESS 32.1 maxw 0.07
+[audit] none     T2_flat_tail   all: R 0.76 [0.59-0.94]  faint 1/q 403  vmax 306  midref 284  ESS 32.1 maxw 0.07
+[audit] none     T2_flat_tail   feh: R 0.73 [0.56-0.92]  faint 1/q 403  vmax 294  midref 284  ESS 32.1 maxw 0.07
+[audit] none     T3_steep_tail  all: R 0.59 [0.42-0.80]  faint 1/q 526  vmax 312  midref 284  ESS 32.1 maxw 0.07
+[audit] none     T3_steep_tail  feh: R 0.57 [0.41-0.77]  faint 1/q 526  vmax 299  midref 284  ESS 32.1 maxw 0.07
+[audit] map_low  T0_baseline    all: R 0.84 [0.72-0.97] nodes-boot [0.70-0.95]  faint 1/q 224  vmax 189  midref 200  kernel 221  ESS 30.2 maxw 0.08
+[audit] map_low  T0_baseline    feh: R 0.87 [0.73-1.01] nodes-boot [0.71-1.03]  faint 1/q 224  vmax 196  midref 200  ESS 30.2 maxw 0.08
+[audit] map_low  T1_extra_node  all: R 0.83 [0.69-0.96]  faint 1/q 230  vmax 191  midref 201  ESS 30.0 maxw 0.08
+[audit] map_low  T1_extra_node  feh: R 0.85 [0.70-1.00]  faint 1/q 230  vmax 197  midref 201  ESS 30.0 maxw 0.08
+[audit] map_low  T2_flat_tail   all: R 0.79 [0.68-0.89]  faint 1/q 242  vmax 190  midref 198  ESS 30.1 maxw 0.08
+[audit] map_low  T2_flat_tail   feh: R 0.79 [0.68-0.89]  faint 1/q 242  vmax 191  midref 198  ESS 30.1 maxw 0.08
+[audit] map_low  T3_steep_tail  all: R 0.87 [0.74-0.98]  faint 1/q 217  vmax 188  midref 197  ESS 30.5 maxw 0.08
+[audit] map_low  T3_steep_tail  feh: R 0.89 [0.75-1.04]  faint 1/q 217  vmax 193  midref 197  ESS 30.5 maxw 0.08
+[audit] map_high T0_baseline    all: R 0.85 [0.74-0.96] nodes-boot [0.73-0.96]  faint 1/q 208  vmax 177  midref 186  kernel 205  ESS 31.0 maxw 0.08
+[audit] map_high T0_baseline    feh: R 0.87 [0.73-1.00] nodes-boot [0.75-0.99]  faint 1/q 208  vmax 181  midref 186  ESS 31.0 maxw 0.08
+[audit] map_high T1_extra_node  all: R 0.81 [0.68-0.94]  faint 1/q 221  vmax 179  midref 189  ESS 30.5 maxw 0.08
+[audit] map_high T1_extra_node  feh: R 0.83 [0.68-0.97]  faint 1/q 221  vmax 183  midref 189  ESS 30.5 maxw 0.08
+[audit] map_high T2_flat_tail   all: R 0.77 [0.67-0.88]  faint 1/q 232  vmax 179  midref 188  ESS 30.5 maxw 0.08
+[audit] map_high T2_flat_tail   feh: R 0.78 [0.67-0.88]  faint 1/q 232  vmax 181  midref 188  ESS 30.5 maxw 0.08
+[audit] map_high T3_steep_tail  all: R 0.87 [0.76-0.98]  faint 1/q 201  vmax 175  midref 184  ESS 31.3 maxw 0.08
+[audit] map_high T3_steep_tail  feh: R 0.89 [0.75-1.01]  faint 1/q 201  vmax 179  midref 184  ESS 31.3 maxw 0.08
+extinction          tail population  n_nodes    R  R_fixed_p16  R_fixed_p84  ht_faint  vmax_faint  ht_tot  vmax_tot  ess_bright  maxw_bright  dlnrapo_w  dlnrapo
+      none   T0_baseline        all        8 0.61         0.45         0.81    526.90      322.49  749.16    563.30       32.14         0.07       1.48     0.13
+      none   T0_baseline        feh        8 0.59         0.44         0.79    526.90      309.16  749.16    544.24       32.14         0.07       1.48     0.13
+      none T1_extra_node        all        9 0.60         0.43         0.80    508.08      304.40  728.68    544.52       32.07         0.07       1.46     0.13
+      none T1_extra_node        feh        9 0.58         0.42         0.78    508.08      292.44  728.68    526.85       32.07         0.07       1.46     0.13
+      none  T2_flat_tail        all        8 0.76         0.59         0.94    403.48      305.78  625.68    546.63       32.12         0.07       1.46     0.13
+      none  T2_flat_tail        feh        8 0.73         0.56         0.92    403.48      294.39  625.68    529.49       32.12         0.07       1.46     0.13
+      none T3_steep_tail        all        8 0.59         0.42         0.80    525.76      311.55  746.91    551.93       32.09         0.07       1.48     0.13
+      none T3_steep_tail        feh        8 0.57         0.41         0.77    525.76      299.09  746.91    533.75       32.09         0.07       1.48     0.13
+   map_low   T0_baseline        all        8 0.84         0.72         0.97    224.40      189.48  461.45    418.32       30.19         0.08       0.89     0.13
+   map_low   T0_baseline        feh        8 0.87         0.73         1.01    224.40      195.54  461.45    433.37       30.19         0.08       0.89     0.13
+   map_low T1_extra_node        all        9 0.83         0.69         0.96    230.01      190.62  467.60    419.76       30.01         0.08       1.06     0.13
+   map_low T1_extra_node        feh        9 0.85         0.70         1.00    230.01      196.63  467.60    434.90       30.01         0.08       1.06     0.13
+   map_low  T2_flat_tail        all        8 0.79         0.68         0.89    241.77      189.84  477.21    417.92       30.14         0.08       1.24     0.13
+   map_low  T2_flat_tail        feh        8 0.79         0.68         0.89    241.77      191.28  477.21    427.71       30.14         0.08       1.24     0.13
+   map_low T3_steep_tail        all        8 0.87         0.74         0.98    216.59      187.73  452.57    415.94       30.50         0.08       0.81     0.13
+   map_low T3_steep_tail        feh        8 0.89         0.75         1.04    216.59      193.43  452.57    430.30       30.50         0.08       0.81     0.13
+  map_high   T0_baseline        all        8 0.85         0.74         0.96    207.71      176.71  431.98    392.70       30.98         0.08       0.89     0.13
+  map_high   T0_baseline        feh        8 0.87         0.73         1.00    207.71      181.01  431.98    405.01       30.98         0.08       0.89     0.13
+  map_high T1_extra_node        all        9 0.81         0.68         0.94    221.11      179.13  446.60    395.89       30.52         0.08       1.14     0.13
+  map_high T1_extra_node        feh        9 0.83         0.68         0.97    221.11      183.34  446.60    408.50       30.52         0.08       1.14     0.13
+  map_high  T2_flat_tail        all        8 0.77         0.67         0.88    231.92      179.36  456.58    396.11       30.45         0.08       1.49     0.13
+  map_high  T2_flat_tail        feh        8 0.78         0.67         0.88    231.92      180.82  456.58    405.66       30.45         0.08       1.49     0.13
+  map_high T3_steep_tail        all        8 0.87         0.76         0.98    200.99      175.18  424.19    390.48       31.31         0.08       0.67     0.13
+  map_high T3_steep_tail        feh        8 0.89         0.75         1.01    200.99      178.99  424.19    401.95       31.31         0.08       0.67     0.13

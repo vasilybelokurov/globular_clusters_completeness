@@ -292,3 +292,80 @@ def test_spline_vmax_recovers_total_with_never_detectable_orbits():
     fM = CV.population_detectability(Md, (Vt - Md[:, None])[pop], 1 / q[pop],
                                      lambda V: np.exp(CV.lnC_spline(V, nodes, fit["p"])))
     assert abs((1 / fM).sum() / N - 1) < 0.2
+
+
+def test_regional_basis_matches_direct():
+    from gc_completeness import cv as CV
+    rng = np.random.default_rng(3)
+    model = CV.RegionalC([np.array([5.0, 7.0, 9.0, 11.0]), np.array([6.0, 8.0, 10.0])])
+    p = rng.normal(-0.5, 0.5, model.n_par)
+    p[model.slices[1] - 1] = -0.3; p[-1] = -0.4                      # tail steps <= 0
+    V = rng.uniform(2, 16, (40, 30)); reg = rng.integers(0, 2, V.shape)
+    assert np.allclose(model.basis(V, reg) @ p, model.lnC(V, reg, p))
+    assert np.allclose(model.lnC(np.array([1.0]), np.array([0]), p), 0.0)   # anchor: flat at 0 brighter than node 0
+    assert model.n_par == 3 + 3
+
+
+def test_regional_gradient_and_recovery():
+    """Two regions with different true C; orbits cross regions. Fit recovers the inner level."""
+    from gc_completeness import cv as CV
+    rng = np.random.default_rng(5)
+    N, T = 4000, 200
+    V_t = rng.uniform(4, 14, (N, T))
+    reg_t = (rng.random((N, T)) < rng.uniform(0, 1, (N, 1))).astype(int)    # each orbit spends a random time fraction inside
+    lnCtrue = lambda V, r: np.where(r == 0, np.minimum(0, -0.4 * (V - 6)), np.log(0.5) + np.minimum(0, -0.6 * (V - 6)))
+    pick = rng.integers(0, T, N); ii = np.arange(N)
+    det = rng.random(N) < np.exp(lnCtrue(V_t[ii, pick], reg_t[ii, pick]))
+    Vn, rn = V_t[ii, pick][det], reg_t[ii, pick][det]
+    model = CV.RegionalC(CV.region_nodes(Vn, rn, 2, 200))
+    B_t, B_now = model.basis(V_t[det], reg_t[det]), model.basis(Vn, rn)
+    f = CV.fit_cv_spline(B_t, B_now, bounds=model.bounds())
+    assert f["success"]
+    # inner - outer ln C at V = 8..11 (both curves resolved there): truth = ln 0.5 - 0.2 (V - 6)
+    Vg = np.linspace(8, 11, 7)
+    dfit = model.lnC(Vg, np.ones(7, int), f["p"]) - model.lnC(Vg, np.zeros(7, int), f["p"])
+    assert abs(np.mean(dfit - (np.log(0.5) - 0.2 * (Vg - 6)))) < 0.15, dfit   # mean level (piecewise-linear shape error ~0.2)
+    # analytic gradient vs finite differences at a random point
+    from scipy.optimize import approx_fprime
+    def nll(p):
+        a = B_t @ p; amax = a.max(1, keepdims=True)
+        return -((B_now @ p).sum() - (np.log(np.exp(a - amax).mean(1)) + amax[:, 0]).sum())
+    p0 = f["p"] + 0.05
+    a = B_t @ p0; e = np.exp(a - a.max(1, keepdims=True)); Z = e.sum(1)
+    g = -(B_now.sum(0) - np.einsum("nt,ntp->p", e / Z[:, None], B_t))
+    assert np.allclose(g, approx_fprime(p0, nll, 1e-6), rtol=1e-3, atol=1e-2)
+
+
+def test_contrast_model_basis_and_global_rescaling():
+    """ContrastC basis equals direct lnC; adding a constant to every region's ln C leaves the phase
+    likelihood unchanged (only the anchor fixes the level)."""
+    from gc_completeness import cv as CV
+    rng = np.random.default_rng(7)
+    m = CV.ContrastC(np.array([5.0, 7.0, 9.0, 11.0]), 2, slope=True)
+    p = np.r_[-0.3, -0.8, -0.5, -0.7, 0.1]
+    V = rng.uniform(2, 16, (30, 20)); reg = rng.integers(0, 2, V.shape)
+    assert np.allclose(m.basis(V, reg) @ p, m.lnC(V, reg, p))
+    a = m.lnC(V, reg, p); an = a[:, 0]
+    ll = lambda a, an: (an - np.log(np.exp(a).mean(1))).sum()
+    assert np.isclose(ll(a, an), ll(a + 0.7, an + 0.7))
+
+
+def test_spline_tail_variants():
+    from gc_completeness import cv as CV
+    nodes = np.array([5.0, 7.0, 9.0, 11.0]); p = np.array([-0.3, -0.8, -0.5])
+    V = np.linspace(3, 16, 60)
+    for tail in (0.0, 1.0, 2.0):
+        assert np.allclose(CV.spline_basis(V, nodes, tail) @ p, CV.lnC_spline(V, nodes, p, tail))
+    last = CV.lnC_spline(np.array([11.0]), nodes, p)[0]
+    assert np.allclose(CV.lnC_spline(np.array([14.0]), nodes, p, 0.0), last)                     # flat
+    s1 = CV.lnC_spline(np.array([12.0]), nodes, p, 1.0)[0] - last
+    assert np.isclose(CV.lnC_spline(np.array([12.0]), nodes, p, 2.0)[0] - last, 2 * s1)          # doubled slope
+
+
+def test_kernel_detectability_limits():
+    from gc_completeness import cv as CV
+    rng = np.random.default_rng(2)
+    Mp = rng.normal(-7, 1.2, 50); mu = rng.uniform(13, 20, (50, 40)); w = rng.uniform(1, 3, 50)
+    Cf = lambda V: 1 / (1 + np.exp((V - 8) / 0.5))
+    Me = np.array([-9.0, -6.0, -5.0])
+    assert np.allclose(CV.kernel_detectability(Me, Mp, mu, w, Cf, 1e4), CV.population_detectability(Me, mu, w, Cf))

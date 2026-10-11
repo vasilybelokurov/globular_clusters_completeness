@@ -357,9 +357,150 @@ def fig_corrected_vmax(ext):
     save(fig, f"paper_corrected_vmax{tag}.png")
 
 
+def fig_region():
+    """Direction-dependent C (region 1 = inner window |l|<30, |b|<15 deg) vs the single C(V), without dust
+    and with map extinction (high bracket); read from real_cv_summary{tag}.json, real_cv_weights{tag}.csv
+    and real_cv_region_boot{tag}.npz (scripts/run_cv.py --mode real)."""
+    import json
+    fig, axes = plt.subplots(2, 2, figsize=(W, 5.4), gridspec_kw=dict(hspace=0.42, wspace=0.28))
+    ymax = 0.0
+    for row, (ext, lab) in enumerate((("none", "no extinction"), ("map_high", "3D-map $A_V$ (high bracket)"))):
+        tag = "" if ext == "none" else f"_{ext}"
+        sm = json.load(open(CVD / f"real_cv_summary{tag}.json"))
+        sp, rg = sm["spline"], sm["region"]
+        t = pd.read_csv(CVD / f"real_cv_weights{tag}.csv")
+        z = np.load(CVD / f"real_cv_region_boot{tag}.npz")
+        ax = axes[row, 0]
+        nd, Cn = np.array(sp["nodes_V"]), np.array(sp["C_nodes"])
+        Vg = np.array(rg["sep"]["V_grid"])
+        lnc = np.where(Vg > nd[-1], np.log(Cn[-1]) + sp["tail_dlnC_dV"] * (Vg - nd[-1]), np.interp(Vg, nd, np.log(Cn)))
+        ax.plot(Vg, np.exp(lnc), color=INK, lw=1.4, label=f"single $C(V)$")
+        for kind, ls in (("sep", "-"), ("contrast", ":")):
+            e = rg[kind]
+            ax.plot(Vg, e["C_outer"], color=C[0], ls=ls, lw=1.3, label=f"{'separate' if kind == 'sep' else 'contrast'}: outer (ΔAIC {e['dAIC_vs_single']:+.1f})")
+            ax.plot(Vg, e["C_inner"], color=C[1], ls=ls, lw=1.3, label=f"{'separate' if kind == 'sep' else 'contrast'}: inner window")
+        ax.set_yscale("log"); ax.set_ylim(0.01, 2); ax.axhline(1, color=MUTED, lw=0.8)
+        ax.set_xlabel("apparent $V$" + (" + $A_V$" if ext != "none" else "") + " [mag]"); ax.set_ylabel("C (anchor = 1)")
+        ax.set_title(f"({'ac'[row]}) {lab}", loc="left"); ax.legend(fontsize=6, loc="lower left")
+        ax = axes[row, 1]
+        M = t.M_V.values; e_ = MV_EDGES
+        obs = np.histogram(M, e_)[0]
+        hb = [np.histogram(M[idx], e_, weights=wb)[0] for idx, wb in zip(z["sep_idx"], z["sep_w"])]
+        lo, hi = np.percentile(hb, 16, 0), np.percentile(hb, 84, 0)
+        ax.fill_between(e_, np.r_[lo, lo[-1]], np.r_[hi, hi[-1]], step="post", color=C[1], alpha=0.25, lw=0)
+        for col, ls, c_, nm in (("w_reg_sep", "-", C[1], "separate"), ("w_reg_contrast", ":", C[1], "contrast"), ("w_spline", "--", INK, "single $C(V)$")):
+            h = np.histogram(M, e_, weights=t[col].values)[0]
+            ax.stairs(h, e_, color=c_, ls=ls, lw=1.4, label=f"{nm}, $1/q$ ({h.sum():.0f})")
+        ax.stairs(obs, e_, color=INK, lw=1.0, alpha=0.6, label=f"observed ({obs.sum()})")
+        ymax = max(ymax, 1.3 * max(hi.max(), obs.max()))
+        ax.set_xlim(-1.5, -11); ax.set_xlabel(r"$M_V$ [mag]"); ax.set_ylabel("GCs per bin")
+        ax.set_title(f"({'bd'[row]}) corrected $M_V$, {lab}", loc="left"); ax.legend(fontsize=6, loc="upper left")
+    for row in (0, 1):                                   # same y-scale in both rows
+        axes[row, 1].set_ylim(0, ymax)
+    save(fig, "paper_region.png")
+
+
+def sys_envelope(h, alts):
+    """Per-bin systematic range in ln: for each budget component, the most negative and most positive
+    ln(h_alt / h) over its variants (zero if all variants lie on one side), then quadrature over components.
+    h: baseline counts (any shape); alts: {component: [counts of each variant]}."""
+    dn, up = np.zeros(np.shape(h)), np.zeros(np.shape(h))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        for comp, hs in alts.items():
+            r = np.log(np.array(hs) / h)
+            r = np.where(np.isfinite(r), r, 0.0)
+            dn += np.minimum(r.min(0), 0) ** 2
+            up += np.maximum(r.max(0), 0) ** 2
+    return np.sqrt(dn), np.sqrt(up)
+
+
+def fig_final():
+    """Final model (sec:final): continuous C(V), map A_V (high bracket), own-orbit 1/q. Dark band: 68% cluster
+    bootstrap (sampling). Light band: sampling and the systematic envelope (sys_envelope over the alternative
+    models of tab:budget, evaluated in each bin) in quadrature. Reads real_cv_weights_map_high.csv,
+    real_cv_boot_map_high.npz and final_alt_weights.csv (scripts/final_systematics.py)."""
+    t = pd.read_csv(CVD / "real_cv_weights_map_high.csv")
+    z = np.load(CVD / "real_cv_boot_map_high.npz")
+    A = pd.read_csv(CVD / "final_alt_weights.csv")
+    assert (A.name.values == t.name.values).all() and np.allclose(A.base, t.w_spline, rtol=1e-6)
+    comps = {}
+    for col in A.columns[4:]:
+        comps.setdefault(col.split(":")[0], []).append(col)
+    w, bidx, bw = t.w_spline.values, z["boot_idx_spline"], z["boot_w_spline"]
+    M = t.M_V.values; faint = M >= -6.5
+
+    def total_err(sel):
+        tb = np.array([wb[sel[idx]].sum() for idx, wb in zip(bidx, bw)])
+        h0 = w[sel].sum()
+        s_lo, s_hi = np.log(h0 / np.percentile(tb, 16)), np.log(np.percentile(tb, 84) / h0)
+        y_lo, y_hi = sys_envelope(h0, {k: [A[v].values[sel].sum() for v in vs] for k, vs in comps.items()})
+        return h0, np.percentile(tb, [16, 84]), (s_lo, s_hi), (float(y_lo), float(y_hi)), (np.hypot(s_lo, y_lo), np.hypot(s_hi, y_hi))
+    res = {}
+    for nm, sel in (("total", np.ones(len(w), bool)), ("faint", faint)):
+        h0, pb, s, y, T = total_err(sel)
+        res[nm] = (h0, pb, T)
+        print(f"[final] {nm}: {h0:.0f}; sampling {pb[0]:.0f}-{pb[1]:.0f} (ln {-s[0]:+.3f}, {s[1]:+.3f}); "
+              f"systematic ln {-y[0]:+.3f}, {y[1]:+.3f}; total ln {-T[0]:+.3f}, {T[1]:+.3f} -> "
+              f"{h0 * np.exp(-T[0]):.0f}-{h0 * np.exp(T[1]):.0f}")
+    N0, _, (T_lo, T_hi) = res["total"]
+    fig = plt.figure(figsize=(W, 3.6))
+    gs = fig.add_gridspec(2, 2, height_ratios=[2.2, 1], hspace=0.08, wspace=0.28)
+    for col, (x, e, lab) in enumerate([(M, MV_EDGES, r"$M_V$ [mag]"),
+                                       (t.feh.values, np.arange(-2.6, 0.21, 0.2), "[Fe/H]")]):
+        ok = np.isfinite(x)
+        ax, axr = fig.add_subplot(gs[0, col]), fig.add_subplot(gs[1, col])
+        obs = np.histogram(x[ok], e)[0]
+        h = np.histogram(x[ok], e, weights=w[ok])[0]
+        hb = []
+        for idx, wb in zip(bidx, bw):
+            xx = x[idx]; o = np.isfinite(xx)
+            hb.append(np.histogram(xx[o], e, weights=wb[o])[0])
+        lo, hi = np.percentile(hb, 16, 0), np.percentile(hb, 84, 0)
+        y_lo, y_hi = sys_envelope(h, {k: [np.histogram(x[ok], e, weights=A[v].values[ok])[0] for v in vs]
+                                      for k, vs in comps.items()})
+        with np.errstate(divide="ignore", invalid="ignore"):
+            dlo = np.where(h > 0, np.log(np.where(lo > 0, h / lo, np.inf)), 0)
+            dhi = np.where(h > 0, np.log(hi / h), 0)
+        Tlo, Thi = h * np.exp(-np.hypot(dlo, y_lo)), h * np.exp(np.hypot(dhi, y_hi))
+        st = lambda a: np.r_[a, a[-1]]
+        okb = obs >= 2
+        for a_, den in ((ax, 1.0), (axr, np.where(okb, obs, np.nan))):
+            with np.errstate(divide="ignore", invalid="ignore"):
+                a_.fill_between(e, st(Tlo / den), st(Thi / den), step="post", color=C[1], alpha=0.15, lw=0,
+                                label="68%, sampling + systematics" if a_ is ax else None)
+                a_.fill_between(e, st(lo / den), st(hi / den), step="post", color=C[1], alpha=0.35, lw=0,
+                                label="68%, sampling" if a_ is ax else None)
+                a_.stairs(h / den, e, color=C[1], lw=1.6, baseline=None,
+                          label=(f"corrected ({N0:.0f}$^{{+{N0 * (np.exp(T_hi) - 1):.0f}}}_{{-{N0 * (1 - np.exp(-T_lo)):.0f}}}$)"
+                                 if col == 0 else f"corrected ({h.sum():.0f}; [Fe/H] known)") if a_ is ax else None)
+        ax.errorbar(0.5 * (e[1:] + e[:-1]), obs, yerr=np.sqrt(obs), fmt="none", ecolor=INK, lw=0.8)
+        ax.stairs(obs, e, color=INK, lw=1.4, label=f"observed ({obs.sum()})")
+        if col == 0:
+            hf, _, (f_lo, f_hi) = res["faint"]
+            ax.axvline(-6.5, ymax=0.6, color=MUTED, lw=0.8, ls=":")
+            ax.text(-1.8, 0.56, f"$M_V>-6.5$:\n{hf:.0f}$^{{+{hf * (np.exp(f_hi) - 1):.0f}}}_{{-{hf * (1 - np.exp(-f_lo)):.0f}}}$",
+                    transform=ax.get_xaxis_transform(), va="top", ha="left", fontsize=7, color=INK)
+        ax.set_ylim(0, 1.25 * np.nanmax(Thi)); ax.tick_params(labelbottom=False)
+        ax.legend(loc="upper left", fontsize=6.5)
+        ax.set_ylabel("GCs per bin"); ax.set_title(f"({'ab'[col]})", loc="left")
+        axr.axhline(1, color=MUTED, lw=0.8); axr.set_ylim(0, 12 if col == 0 else 7); axr.set_xlabel(lab)
+        axr.set_ylabel("corr./obs.")
+        for a in (ax, axr):
+            a.set_xlim((-1.5, -11) if col == 0 else (e[0], e[-1]))
+        if col == 0:
+            print("[final] per-bin M_V systematic ln down/up:", np.round(y_lo, 2).tolist(), np.round(y_hi, 2).tolist())
+    save(fig, "paper_final.png")
+
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--final":
+        fig_final()
+        return
     if len(sys.argv) > 2 and sys.argv[1] == "--vmax":   # single figure from saved outputs
         fig_corrected_vmax(sys.argv[2])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "--region":
+        fig_region()
         return
     fig_mock_classes()
     fig_mock_cv()
