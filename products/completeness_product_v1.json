@@ -1,0 +1,494 @@
+{
+ "product": "completeness_product_v1",
+ "source": {
+  "commit": "094c313918d9a994fa3e971e835edf108b3f7b6a",
+  "dirty": false,
+  "remote": "https://github.com/vasilybelokurov/globular_clusters_completeness.git"
+ },
+ "npz_sha256": "94b469be81ed398e309a7d1f9a907e7c851c50a65409a9883ad209fd18fbc984",
+ "n_clusters": 165,
+ "n_orbit_samples": 500,
+ "clusters": "confirmed GCs with 6D data (configs/default.yaml catalog), in the order of real_cv_weights_*.csv",
+ "anchor": "C = 1 at V brighter than the first node of region 0 (brightest clusters complete)",
+ "apparent_magnitude": "V = M_V + 5 log10(d / 10 pc) + A_V(t); M_V = 4.83 - 2.5 log10(mass_msun / ml_v)",
+ "lnC_form": "region k: ln C = interp(V; nodes, lnC) for V <= nodes[-1] (flat brighter than nodes[0]); lnC[-1] + slope (V - nodes[-1]) beyond",
+ "region_labels": {
+  "none": "all samples region 0",
+  "reg2": "orbit_reg2: 1 inside |l|<30.0, |b|<15.0 deg, else 0",
+  "reg3": "orbit_reg3: as reg2, plus 2 = |b|<15 deg outside the window"
+ },
+ "variants": {
+  "baseline": {
+   "extinction": "map_high",
+   "region_labels": "none",
+   "n_regions": 1,
+   "description": "ADOPTED. Continuous C(V), 3D-map A_V high bracket, one sky region (write-up Sec. final).",
+   "total_inverse_q": 431.97787796041297
+  },
+  "map_low": {
+   "extinction": "map_low",
+   "region_labels": "none",
+   "n_regions": 1,
+   "description": "Systematic: as baseline with the A_V low bracket.",
+   "total_inverse_q": 461.45474596142327
+  },
+  "no_extinction": {
+   "extinction": "none",
+   "region_labels": "none",
+   "n_regions": 1,
+   "description": "NOT adopted (disfavoured, Delta AIC ~ 16): continuous C(V) without extinction.",
+   "total_inverse_q": 749.1605230353459
+  },
+  "tail_T1_extra_node": {
+   "extinction": "map_high",
+   "region_labels": "none",
+   "n_regions": 1,
+   "description": "Systematic: faint-end tail variant T1_extra_node {'tail': 1.0, 'extra_node_pct': 97.5} (configs/cv.yaml faint.tail_variants).",
+   "total_inverse_q": 446.6002645912768
+  },
+  "tail_T2_flat_tail": {
+   "extinction": "map_high",
+   "region_labels": "none",
+   "n_regions": 1,
+   "description": "Systematic: faint-end tail variant T2_flat_tail {'tail': 0.0} (configs/cv.yaml faint.tail_variants).",
+   "total_inverse_q": 456.58331042368013
+  },
+  "tail_T3_steep_tail": {
+   "extinction": "map_high",
+   "region_labels": "none",
+   "n_regions": 1,
+   "description": "Systematic: faint-end tail variant T3_steep_tail {'tail': 2.0} (configs/cv.yaml faint.tail_variants).",
+   "total_inverse_q": 424.1924162809937
+  },
+  "direction_contrast": {
+   "extinction": "map_high",
+   "region_labels": "reg2",
+   "n_regions": 2,
+   "description": "Systematic: two sky regions (inner window |l|<30, |b|<15 = region 1), shared curve plus a constant ln-contrast in region 1.",
+   "total_inverse_q": 453.2015363056008
+  },
+  "direction_sep": {
+   "extinction": "map_high",
+   "region_labels": "reg2",
+   "n_regions": 2,
+   "description": "Systematic: two sky regions, separate curves (region 0 anchored).",
+   "total_inverse_q": 485.0606913989971
+  },
+  "direction_three": {
+   "extinction": "map_high",
+   "region_labels": "reg3",
+   "n_regions": 3,
+   "description": "Systematic, NOT adopted in the write-up (19 clusters now in region 2): three regions = inner window | |b|<15 outside it | rest; separate curves.",
+   "total_inverse_q": 379.5616191767188
+  }
+ },
+ "extinction": {
+  "map_high": "orbit_A_V_high",
+  "map_low": "orbit_A_V_low",
+  "none": "0"
+ },
+ "bootstrap": "baseline only: baseline_boot_lnC (B, n_nodes) at baseline__r0_nodes and baseline_boot_slope (B,), cluster resamples baseline_boot_idx; fixed nodes; replay of run_cv.py analyse_spline",
+ "orbits": {
+  "potential": "mw4",
+  "galactocentric_frame": {
+   "R0": 8.122,
+   "z_sun": 0.0208,
+   "v_sun": [
+    12.9,
+    245.6,
+    7.78
+   ],
+   "roll_deg": 0.0,
+   "references": [
+    "GRAVITY 2018 A&A 615 L15 (R0)",
+    "Bennett & Bovy 2019 MNRAS 482 1417 (z_sun)",
+    "Drimmel & Poggio 2018 RNAAS 2 210 (v_sun)"
+   ]
+  },
+  "integration_time_gyr": 5.0,
+  "n_samples": 500,
+  "rperi_rapo": "min / max galactocentric radius over the samples",
+  "column_0": "present position"
+ },
+ "A_V_conversions": {
+  "R_V": 3.1,
+  "AV_per_AKs": 8.8,
+  "AV_per_EBV_SFD": 2.742,
+  "bayestar_to_EBV": 0.883,
+  "decaps_dmax_kpc": 10.0
+ },
+ "self_check": [
+  {
+   "check": "baseline vs real_cv_weights_map_high.csv:w_spline",
+   "max_rel_err": 4.440892098500626e-16,
+   "tol": 1e-09,
+   "pass": true
+  },
+  {
+   "check": "baseline vs final_alt_weights.csv:base",
+   "max_rel_err": 2.1827394003359757e-08,
+   "tol": 1e-06,
+   "pass": true
+  },
+  {
+   "check": "map_low vs real_cv_weights_map_low.csv:w_spline",
+   "max_rel_err": 5.551115123125783e-16,
+   "tol": 1e-09,
+   "pass": true
+  },
+  {
+   "check": "map_low vs final_alt_weights.csv:map:low",
+   "max_rel_err": 1.3177139379649816e-08,
+   "tol": 1e-06,
+   "pass": true
+  },
+  {
+   "check": "no_extinction vs real_cv_weights.csv:w_spline",
+   "max_rel_err": 4.440892098500626e-16,
+   "tol": 1e-09,
+   "pass": true
+  },
+  {
+   "check": "tail_T1_extra_node vs final_alt_weights.csv:tail:T1_extra_node",
+   "max_rel_err": 6.661338147750939e-16,
+   "tol": 1e-06,
+   "pass": true
+  },
+  {
+   "check": "tail_T2_flat_tail vs final_alt_weights.csv:tail:T2_flat_tail",
+   "max_rel_err": 2.220446049250313e-16,
+   "tol": 1e-06,
+   "pass": true
+  },
+  {
+   "check": "tail_T3_steep_tail vs final_alt_weights.csv:tail:T3_steep_tail",
+   "max_rel_err": 3.3306690738754696e-16,
+   "tol": 1e-06,
+   "pass": true
+  },
+  {
+   "check": "direction_contrast vs real_cv_weights_map_high.csv:w_reg_contrast",
+   "max_rel_err": 8.881784197001252e-16,
+   "tol": 1e-09,
+   "pass": true
+  },
+  {
+   "check": "direction_contrast vs final_alt_weights.csv:direction:contrast",
+   "max_rel_err": 2.44295573770259e-08,
+   "tol": 1e-06,
+   "pass": true
+  },
+  {
+   "check": "direction_sep vs real_cv_weights_map_high.csv:w_reg_sep",
+   "max_rel_err": 4.440892098500626e-16,
+   "tol": 1e-09,
+   "pass": true
+  },
+  {
+   "check": "direction_sep vs final_alt_weights.csv:direction:sep",
+   "max_rel_err": 3.694468042603205e-08,
+   "tol": 1e-06,
+   "pass": true
+  },
+  {
+   "check": "direction_three vs final_alt_weights.csv:direction:three",
+   "max_rel_err": 4.440892098500626e-16,
+   "tol": 1e-06,
+   "pass": true
+  },
+  {
+   "check": "bootstrap indices vs real_cv_boot_map_high.npz",
+   "max_rel_err": 0.0,
+   "tol": 1e-15,
+   "pass": true
+  },
+  {
+   "check": "bootstrap weights vs real_cv_boot_map_high.npz",
+   "max_rel_err": 1.1102230246251565e-15,
+   "tol": 1e-09,
+   "pass": true
+  }
+ ],
+ "configs": {
+  "cv": {
+   "seed": 20261011,
+   "output_dir": "outputs/cv",
+   "plots_dir": "plots",
+   "cache_dir": "outputs/cache",
+   "catalog_config": "configs/default.yaml",
+   "n_min_v": 20,
+   "n_classes": 3,
+   "n_min_d": 15,
+   "d_hi": 150.0,
+   "orbits": {
+    "integration_time_gyr": 5.0,
+    "n_samples": 500
+   },
+   "n_bootstrap": 200,
+   "mock": {
+    "n_realisations": 100,
+    "n_bootstrap": 100,
+    "n_true": 250,
+    "proxy_tests": true,
+    "gclf": [
+     -7.4,
+     1.2
+    ],
+    "density": {
+     "type": "broken_power_law",
+     "alpha": 2.0,
+     "beta": 4.0,
+     "rb": 5.0,
+     "rc": 0.3
+    },
+    "r_trunc": 1000.0,
+    "completeness": {
+     "V_lim": 8.0,
+     "dM": 0.5
+    },
+    "scenarios": {
+     "A_C_of_V": {},
+     "B_latitude": {
+      "b_term": {
+       "depth": 0.7,
+       "b0": 5.0
+      }
+     },
+     "C_sgr_clump": {
+      "clump": {
+       "n": 15,
+       "xyz": [
+        17.5,
+        2.5,
+        -6.5
+       ],
+       "vxyz": [
+        237.9,
+        -24.3,
+        209.0
+       ],
+       "sig_x": 1.0,
+       "sig_v": 10.0
+      }
+     },
+     "D_not_V": {
+      "not_V": {
+       "V0": 4.0,
+       "slope": 0.6
+      }
+     },
+     "E_dust": {
+      "dust": {
+       "a0": 1.0,
+       "h_R": 3.0,
+       "h_z": 0.1
+      }
+     },
+     "F_two_survey": {
+      "C_shape": "two_survey"
+     },
+     "G_power_tail": {
+      "C_shape": "power_tail"
+     }
+    }
+   },
+   "vmax_M_ref": -8.0,
+   "region_window": [
+    30.0,
+    15.0
+   ],
+   "mock_region": {
+    "n_realisations": 100,
+    "n_bootstrap": 50,
+    "window": [
+     30.0,
+     15.0
+    ],
+    "scenarios": {
+     "A_C_of_V": {},
+     "F_two_survey": {
+      "C_shape": "two_survey"
+     },
+     "H_window_shape": {
+      "window": {
+       "L": 30.0,
+       "B": 15.0,
+       "V_lim_in": 6.0
+      }
+     },
+     "I_window_factor": {
+      "window": {
+       "L": 30.0,
+       "B": 15.0,
+       "factor": 0.5
+      }
+     },
+     "J_window_mismatch": {
+      "window": {
+       "L": 60.0,
+       "B": 25.0,
+       "V_lim_in": 6.5
+      }
+     },
+     "B_latitude": {
+      "b_term": {
+       "depth": 0.7,
+       "b0": 5.0
+      }
+     },
+     "E_dust": {
+      "dust": {
+       "a0": 1.0,
+       "h_R": 3.0,
+       "h_z": 0.1
+      }
+     },
+     "C_sgr_clump": {
+      "clump": {
+       "n": 15,
+       "xyz": [
+        17.5,
+        2.5,
+        -6.5
+       ],
+       "vxyz": [
+        237.9,
+        -24.3,
+        209.0
+       ],
+       "sig_x": 1.0,
+       "sig_v": 10.0
+      }
+     }
+    },
+    "n_min_coarse": 40,
+    "n_min_fine": 10
+   },
+   "faint": {
+    "M_faint": -6.5,
+    "M_bright_ref": -8.0,
+    "R_real": 0.85,
+    "tail_variants": {
+     "T0_baseline": {
+      "tail": 1.0
+     },
+     "T1_extra_node": {
+      "tail": 1.0,
+      "extra_node_pct": 97.5
+     },
+     "T2_flat_tail": {
+      "tail": 0.0
+     },
+     "T3_steep_tail": {
+      "tail": 2.0
+     }
+    },
+    "kernel_sigma": 1.0,
+    "n_boot": 200,
+    "tol_total_median_ln": 0.1,
+    "tol_faint_median_ln": 0.15,
+    "coverage_band": [
+     0.59,
+     0.77
+    ],
+    "mock": {
+     "real_spline_from": "real_cv_summary_map_high.json",
+     "gclf": [
+      -6.8,
+      1.5
+     ],
+     "n_true": 252,
+     "n_calib": 100,
+     "n_valid": 100,
+     "n_boot": 60,
+     "classes_M": [
+      -8.0,
+      -6.5
+     ],
+     "scenarios": {
+      "N0_real": {
+       "s": 1.0,
+       "C_shape": "real_spline"
+      },
+      "N0_real_dust": {
+       "s": 1.0,
+       "C_shape": "real_spline",
+       "dust": {
+        "a0": 1.0,
+        "h_R": 3.0,
+        "h_z": 0.1
+       }
+      },
+      "N0_logistic": {
+       "s": 1.0
+      },
+      "N0_powertail": {
+       "s": 1.0,
+       "C_shape": "power_tail"
+      },
+      "T2_real": {
+       "s": 2.0,
+       "C_shape": "real_spline"
+      },
+      "T4_real": {
+       "s": 4.0,
+       "C_shape": "real_spline"
+      },
+      "T4_real_dust": {
+       "s": 4.0,
+       "C_shape": "real_spline",
+       "dust": {
+        "a0": 1.0,
+        "h_R": 3.0,
+        "h_z": 0.1
+       }
+      }
+     }
+    }
+   }
+  },
+  "default": {
+   "catalog": {
+    "path": "~/data/catalogues/gc_catalog_updated.fits",
+    "columns": {
+     "name": "NAME",
+     "ra": "RA",
+     "dec": "DEC",
+     "distance": "DIST",
+     "pmra": "PMRA",
+     "pmdec": "PMDEC",
+     "vlos": "RV",
+     "distance_error": "DIST_ERR",
+     "pmra_error": "PMRA_ERR",
+     "pmdec_error": "PMDEC_ERR",
+     "vlos_error": "RV_ERR",
+     "feh": "FEH",
+     "ebv": "EBV",
+     "r_h": "RH",
+     "mass": "MASS",
+     "age": "AGE"
+    },
+    "missing_values": {
+     "feh": [
+      -99.0
+     ],
+     "age": [
+      -999.0,
+      0.0
+     ]
+    },
+    "classification_column": null,
+    "candidate_names": [],
+    "supplementary": {
+     "path": "data/baumgardt_combined_table.txt",
+     "match_radius_arcsec": 60,
+     "add_unmatched": true
+    }
+   },
+   "galactocentric": {},
+   "potential": {
+    "kind": "mw4"
+   }
+  }
+ }
+}
