@@ -32,16 +32,22 @@ fixed-target orbit-superposition estimator in the spirit of Khoperskov et al.\ (
 by $\approx 25\%$ on the same mocks. Applied to the data with $C$ a function of
 extinction-free apparent magnitude $V$, completeness falls from 1 at $V<6$ (assumed) to $0.14$ at
 $V>11$. Weighting each cluster by the inverse of its orbit-averaged completeness turns 165 observed
-GCs into $483$ ($68\%$: $335$--$765$); the faint clusters ($\MV>-6.5$) rise from 55 to $267$
-($168$--$473$). Mocks show these totals are lower limits, because faint clusters on orbits that never
-enter the detectable volume cannot be recovered by reweighting observed orbits. Adding extinction
-along every orbit from 3D dust maps (DECaPS, Bayestar19, Marshall, with SFD beyond their reach)
-improves the fit by $\Delta\mathrm{AIC}\approx 8$ and gives a corrected total of 411--455 (faint:
-197--218). A simpler latitude proxy, completeness $C_V(V)\,g(|b|)$, gives 520. A continuous
-$C(V)$ with a falling faint tail fits better still, and with a $1/V_{\max}$ correction over the orbit
-population, which assumes faint and bright clusters share one orbit distribution, it recovers the true
-total within 0.9--1.1 in mocks. On the data it gives 393--418 GCs (68\% intervals 274--625), of which
-177--189 are fainter than $\MV=-6.5$.
+GCs into $483$ ($68\%$: $335$--$765$). Adding extinction along every orbit from 3D dust maps
+(DECaPS, Bayestar19, Marshall, with SFD beyond their reach) improves the fit by
+$\Delta\mathrm{AIC}\approx 8$ and \emph{lowers} the corrected total: without extinction the fitted
+$C(V)$ absorbs the dust losses of the inner Galaxy and applies them in every direction, inflating the
+weights of distant halo clusters. A continuous $C(V)$ whose faint tail keeps falling fits better
+still and removes a factor-of-two undercount of faint clusters in mocks. Letting completeness differ
+between the inner Galaxy ($|l|<30^\circ$, $|b|<15^\circ$) and the rest of the sky recovers such an effect
+in mocks; on the data it is preferred without extinction ($\Delta\mathrm{AIC}=-4.2$) but not once the
+maps are included, where two- or three-region variants change the total by $-12$ to $+12\%$. Our final estimate (continuous
+$C(V)$, maps, own-orbit weights) is $N_{\rm GC}\approx430^{+215}_{-125}$ (68\%, sampling and quantified
+systematics), of which about 210 ($125$--$325$) are fainter than $\MV=-6.5$; three $1/V_{\max}$-type weightings over orbit populations give 393--432 (faint 177--208). In
+mocks matched to the observed sample the bootstrap intervals are calibrated (68\% coverage
+0.63--0.79) and no weighting is significantly better than another. The data favour at most a mild
+increase of orbit size towards fainter clusters. The dominant uncertainties are systematic: the
+extinction treatment (a factor of 1.7), the assumption that the brightest clusters are complete, and
+the Galactic potential.
 \end{abstract}
 
 %======================================================================
@@ -116,7 +122,10 @@ ratios, Eq.~\ref{eq:phaselike}) and the likelihood maximised numerically. Two re
 detection. And in the $1/V_{\max}$ form, a faint cluster's detection chance is averaged over the
 orbits of bright clusters, which are visible almost anywhere, rather than over its own orbit alone.
 This counts faint clusters on orbits where none has been seen, on the assumption that faint and
-bright clusters share one orbit distribution.
+bright clusters share one orbit distribution. On mocks matched to the observed sample, neither form
+is reliably better (Sec.~\ref{sec:faint}), and we quote the simpler own-orbit form as the headline.
+Two further ingredients matter: extinction along each orbit (Secs.~\ref{sec:ext}, \ref{sec:nodustbias})
+and, as a check, completeness that depends on direction (Sec.~\ref{sec:region}).
 
 %======================================================================
 \section{Data}
@@ -546,6 +555,67 @@ E: dust disc & $0.51$ ($0.16$) & $0.68$ ($0.19$) & $0.69$ ($0.19$) \\
 \label{fig:ext}
 \end{figure}
 
+\subsection{Why the no-dust fit overcorrects: the inner Galaxy's dust applied to the halo}
+\label{sec:nodustbias}
+
+Adding dust to the model \emph{lowers} the corrected total (483 to 411--455 binned, 749 to 432--461
+continuous), although dust makes clusters fainter. The reason is that the no-dust fit is not free of
+dust: it absorbs the dust losses of the inner Galaxy into $C(V)$ and then applies them in every
+direction.
+
+\paragraph{Where the signal comes from.} If a cluster is detected with equal probability all along
+its orbit and is phase-mixed, the fraction $u_i$ of its orbit time spent closer to the Sun than it is
+now is uniform on $[0,1]$. For the 43 GCs at $\dhel>15$ kpc the median $u$ is 0.44 and a KS test
+against uniform gives $p=0.79$: within their own orbits, the halo clusters show no sign of
+incompleteness. For the 122 GCs at $\dhel<15$ kpc the median is 0.32 ($p=6\times10^{-9}$): they are
+caught preferentially at the near parts of their orbits. These are the inner clusters whose orbits
+cross the disc and bulge. With the 3D maps, the 68 clusters whose orbits have a median galactocentric
+radius below 4 kpc have an orbit-averaged $A_V$ of 3.6 mag (median) and spend 39\% of their time
+behind $A_V>3$. At their present positions the median is only 1.7 mag: they are caught in the less
+obscured parts of their orbits.
+
+\paragraph{How the no-dust fit uses it.} Without $A_V$, the likelihood can attribute that deficit only to
+$V$, so $C(V)$ falls steeply over $V\approx7$--11, the range the inner orbits span. That steep curve
+also applies to halo clusters at the same $V$, on dust-free sightlines. Halo clusters whose whole orbit
+lies at $V>11$ (Pal~3, Pal~4, Crater, AM~4, Whiting~1 and others) all get the largest weight,
+$1/C_{\rm last} = 1/0.144 = 6.9$. With the maps the curve becomes shallower, their $q$ rises to
+0.18--0.20 and their weights fall to 5.0--5.5, while the dust loss lands on the orbits that actually
+cross the dust.
+
+Table~\ref{tab:nodust} splits the change into two steps. Refitting $C$ with the maps but switching
+the dust off along the orbits shows how much loss the no-dust curve had absorbed: all weights fall.
+Switching the dust back on restores the loss where it belongs: the inner weights double, the outer
+ones partly recover. Net, the inner clusters gain 19 and the outer ones lose 89. By present
+extinction: clusters with $A_{V,\rm now}<1$ (84) go from a summed weight of 296 to 207, those with
+$A_{V,\rm now}>1$ (81) from 187 to 204; the most obscured bulge clusters change most (Terzan~5, $q$
+from 1.00 to 0.21; Terzan~1, 0.96 to 0.16).
+
+\begin{table}[h]
+\centering
+\caption{Summed weights $\sum 1/q_i$ (binned $C$) for clusters whose orbits have median galactocentric
+radius below 4 kpc (inner) or above (outer). (a) no-dust fit $C_0(V)$; (b) $C$ refitted with map
+extinction (high bracket) but evaluated without $A_V$ along the orbits; (c) the map fit, $C_d(V+A_V)$.}
+\label{tab:nodust}
+\small
+\begin{tabular}{lccc}
+\toprule
+ & Inner (68) & Outer (97) & Total \\
+\midrule
+(a) $C_0(V)$, no dust & 152 & 330 & 483 \\
+(b) $C_d(V)$, dust off along orbits & 86 & 200 & 287 \\
+(c) $C_d(V+A_V)$ & 171 & 241 & 411 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Why mock E behaves differently.} In mock scenario E, ignoring dust lowers the corrected total
+(0.51 against 0.61 of truth with the true $A_V$). The sign of the bias depends on the balance between
+the two terms: the extra loss on dusty orbits, which ignoring dust misses, and the steepened $C(V)$
+applied to dust-free orbits at the same $V$. In the mock population the first dominates; in the real
+catalogue, where the largest weights belong to distant halo clusters, the second does. The
+likelihood settles which model is right in either case: it prefers the map model by $\Delta{\rm AIC}
+= 8$ (binned) and 16--17 (continuous), and in mocks it picks the true dust model in 98\% of realisations.
+
 \subsection{Faint clusters on never-detectable orbits: continuous $C(V)$ and $1/V_{\max}$}
 \label{sec:vmax}
 
@@ -641,16 +711,6 @@ $\feh\ge-1$, $1/V_{\max}$ per class & 119 ($75$--$169$) & 175 ($102$--$277$) & 1
 \end{tabular}
 \end{table}
 
-\paragraph{A check of the shared-orbit assumption.} If faint and bright clusters share one orbit
-distribution, the detected faint clusters should preferentially sit on the more detectable orbits.
-Then $1/V_{\max}$ should exceed the own-orbit $1/q$ for faint clusters: the ratio has median
-1.0--1.4 across the mocks. On the real data it is 0.85 (maps, either bracket) and 0.61 (no
-extinction): observed faint clusters lie on orbits less detectable than those of bright clusters.
-In mocks that satisfy the assumption, a ratio below 0.85 occurs in 4--37\% of realisations and below
-0.61 in 3--19\% (13\% and 5\% in scenario A), so the test does not reject the assumption at this
-sample size. The direction is the one expected if faint GCs are more often on extended halo orbits,
-in which case $1/V_{\max}$ undercounts them.
-
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{paper_corrected_vmax_map_high.png}
@@ -660,27 +720,366 @@ clusters of all metallicities as orbit population. (b) [Fe/H], with $1/V_{\max}$
 \label{fig:vmax}
 \end{figure}
 
+\subsection{Which faint-end weighting? Realistic mocks and the shared-orbit assumption}
+\label{sec:faint}
+
+\paragraph{The question.} $1/V_{\max}$ assumes faint and bright GCs share one orbit distribution. If they
+do, the detected faint clusters sit preferentially on the more detectable orbits, and the ratio
+$R = $ faint$(1/V_{\max})/$faint$(1/q)$ exceeds 1: its median is 1.0--1.4 in the mocks of
+Table~\ref{tab:vmax_mock}. On the real data $R = 0.85$ (maps) and 0.61 (no extinction): the observed
+faint clusters lie on orbits \emph{less} detectable than those of bright clusters. If faint GCs are
+preferentially on extended orbits, $1/V_{\max}$ undercounts them, and the mock-based preference for it
+does not carry over. We therefore audited $R$, built mocks matched to the observed sample, and
+compared four weightings on them, with acceptance tolerances fixed in advance (in
+\texttt{configs/cv.yaml}): $|$median $\ln(N_{\rm corr}/N_{\rm true})| \le 0.10$ for totals and
+$\le0.15$ for faint clusters, and 68\% coverage in $[0.59, 0.77]$. The four weightings are
+\begin{itemize}
+\item own-orbit $1/q$;
+\item $1/V_{\max}$ with the bright clusters ($\MV<-8$) as orbit population;
+\item a luminosity-matched $1/V_{\max}$, in which the population is all clusters weighted by
+$1/q_j$ and by a Gaussian of width 1 mag in $\MV$;
+\item $1/V_{\max}$ with the intermediate class ($-8\le\MV<-6.5$) as orbit population for faint targets.
+\end{itemize}
+
+\paragraph{Audit of $R$ on the real data.} With the maps (high bracket), $R = 0.85$ with a paired
+bootstrap interval of $0.74$--$0.96$; it is below 1 in 92--94\% of resamples. Resampling the spline
+node placement as well gives $0.73$--$0.96$. Three variants of the faint-end tail (an extra node at the
+97.5th percentile of observed $V$, a flat tail, a tail twice as steep) and the per-[Fe/H] orbit
+populations give $R = 0.77$--$0.89$; the low map bracket gives 0.79--0.89. The bright orbit population
+is not dominated by a few clusters: its effective size is 31 of 40 and its largest normalised weight
+8\%. So $R<1$ is not an artefact of the tail form or of a few weights.
+
+\paragraph{Apocentres.} The raw median apocentres of faint and bright GCs are 10.3 and 9.0 kpc
+($\Delta\ln r_{\rm apo} = 0.13$, bootstrap $-0.39$ to $0.59$). Weighted by $1/q$ they are 14.1 and 5.8 kpc
+($\Delta\ln r_{\rm apo} = 0.89$, $-0.05$ to $1.34$; positive in 82\% of resamples). The weighting itself
+favours extended orbits for faint clusters, so only mocks can say what these numbers imply. Neither
+statistic sees orbit families with no detected member.
+
+\paragraph{Realistic mocks.} Mocks with the logistic truth of Sec.~\ref{sec:mocks}, at the observed sample
+size, detect only 2--11 faint clusters against 55 real ones, because their logistic $C(V)$ falls far more steeply than the fitted one.
+The new mocks use as true completeness the continuous $C(V)$ fitted to the real data (maps, high
+bracket), a Gaussian luminosity function with mean $-6.8$ and width 1.5 mag, and 252 clusters, which
+gives 167 detected, 54 of them faint, in the null case. Luminosity is drawn first; each class (bright,
+intermediate, faint) is then sampled from its own isotropic DF with break radius scaled by $1$,
+$\sqrt{s}$ and $s$. $s=1$ is the null (orbits independent of $\MV$); $s=2$ and $s=4$ make faint GCs
+progressively more extended. We add the dust disc of scenario E, and two misspecification controls:
+the logistic $C(V)$ and the power-law tail. Each scenario has 100 calibration and 100 validation
+realisations; the mock design was fixed after a smoke test that showed detection counts only.
+
+\begin{table}[h]
+\centering
+\caption{Validation mocks: median $\ln(N_{\rm corr}/N_{\rm true})$ for the total and for faint clusters
+($\MV\ge-6.5$), 100 realisations per scenario. Columns: own-orbit $1/q$; $1/V_{\max}$ with the bright
+orbit population; luminosity-matched (kernel) $1/V_{\max}$; $1/V_{\max}$ with the intermediate class as
+population for faint targets. Last two rows: misspecification controls.}
+\label{tab:faint_mock}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+Scenario & $1/q$: total, faint & $1/V_{\max}$: total, faint & kernel: faint & intermediate: faint \\
+\midrule
+Null ($s=1$), real $C$ & $-0.06$, $-0.12$ & $-0.14$, $-0.16$ & $-0.12$ & $-0.13$ \\
+Null + dust disc & $+0.05$, $+0.10$ & $+0.02$, $+0.01$ & $+0.09$ & $+0.04$ \\
+$s=2$ & $+0.06$, $+0.07$ & $-0.08$, $-0.17$ & $+0.02$ & $-0.04$ \\
+$s=4$ & $+0.13$, $+0.15$ & $-0.03$, $-0.14$ & $+0.09$ & $-0.02$ \\
+$s=4$ + dust disc & $+0.12$, $+0.13$ & $+0.02$, $-0.01$ & $+0.10$ & $+0.05$ \\
+\midrule
+Null, logistic $C$ & $-0.13$, $-0.35$ & $-0.08$, $-0.16$ & $-0.31$ & $-0.19$ \\
+Null, power-law tail & $+0.12$, $+0.15$ & $+0.00$, $-0.09$ & $+0.14$ & $-0.01$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Results (Table~\ref{tab:faint_mock}).}
+\begin{itemize}
+\item \textbf{The intervals are calibrated once the mocks resemble the data.} The 68\% bootstrap
+intervals (node placement resampled) cover the truth in 63--79\% of validation realisations for every
+weighting and scenario. The factor that would make them cover exactly 68\% on the calibration set is
+0.92--1.03, so no inflation is needed. The 53--70\% coverage of Sec.~\ref{sec:vmax} came from the
+small, steeply selected samples of the earlier mocks.
+\item \textbf{No weighting is reliably better.} All four are within $\pm0.17$ in median $\ln$ in the
+realistic scenarios, and the scatter of a single sample is large (rms $\ln$ 0.36--0.61 for totals,
+0.44--0.74 for faint clusters). The standard error of each median bias is 0.04--0.07, comparable to
+the differences between weightings, and on the same realisations the intermediate-class version
+changes $|\ln|$ errors by at most 0.04 relative to the others, with 95\% intervals that include
+zero in nearly every scenario. Its apparent advantage in the $s>1$ scenarios is also favoured by the
+mock design, whose orbit trend changes at exactly its class boundaries. The bright-population
+$1/V_{\max}$ is biased low even in the null ($-0.14$, $-0.16$).
+\item \textbf{The misspecification controls fail for all weightings} at the faint end ($-0.16$ to
+$-0.35$ for the logistic truth), as expected when $C(V)$ is poorly represented.
+\end{itemize}
+
+\paragraph{Do faint GCs have more extended orbits?} Table~\ref{tab:faint_diag} compares the real values
+of $R$ and of the apocentre differences with their mock distributions. The real data fit a mild trend
+($s=2$) best. A strong trend ($s=4$) is disfavoured: only 2--4\% of those mocks have a raw apocentre
+difference as small as observed. No trend is not excluded: each statistic alone has a probability of
+0.1--0.2 under the null, and $R$ and the weighted apocentre difference jointly 0.02--0.09.
+
+\begin{table}[h]
+\centering
+\caption{Fraction of validation and calibration mocks (200 per scenario) at least as extreme as the real
+data: $R\le0.85$; $1/q$-weighted $\Delta\ln r_{\rm apo}\ge0.89$; raw $\Delta\ln r_{\rm apo}\ge0.13$.}
+\label{tab:faint_diag}
+\small
+\begin{tabular}{lccc}
+\toprule
+Scenario & $R\le0.85$ & weighted $\Delta\ln r_{\rm apo}\ge0.89$ & raw $\Delta\ln r_{\rm apo}\ge0.13$ \\
+\midrule
+Null ($s=1$) & 0.16 & 0.10 & 0.18 \\
+Null + dust disc & 0.16 & 0.02 & 0.21 \\
+$s=2$ & 0.40 & 0.30 & 0.79 \\
+$s=4$ & 0.64 & 0.74 & 0.98 \\
+$s=4$ + dust disc & 0.44 & 0.68 & 0.96 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Choice.} We take own-orbit $1/q$ as the headline weighting: it needs no choice of orbit
+population, passes in the null and mild-trend mocks, and is the closest to unbiased in the case the
+data favour. The other three give the sensitivity range. With the continuous $C(V)$ and the maps
+(high bracket) the corrected total is 432 ($321$--$628$) with $1/q$ and 393--432 across the four
+weightings; faint clusters number 208 ($137$--$314$) and 177--208. The low map bracket raises all
+values by 6--8\%.
+
+\subsection{Direction-dependent completeness}
+\label{sec:region}
+
+\paragraph{Model.} Sec.~\ref{sec:nodustbias} shows that a single $C(V)$ can carry the selection of one
+part of the sky into another. We therefore let completeness depend on direction: each orbit sample is
+assigned to the inner window $|l|<30^\circ$, $|b|<15^\circ$ (fixed before fitting) or to the rest of
+the sky, and $\ln C$ is evaluated with that region's curve. The rest of the sky carries the anchor. We
+fit two forms: a shared continuous curve
+plus a constant inner contrast (one extra parameter), and separate continuous curves per region, with
+nodes at the median present $V$ of the clusters now in each region. The inner level is constrained by
+orbits that cross between regions: 86 clusters spend 10--90\% of their orbit in each, while 39 stay
+in the window throughout. Both weightings carry over unchanged, with every orbit sample using its
+region's $C$.
+
+\paragraph{Mocks.} We added three scenarios to those of Sec.~\ref{sec:mocks}, 100 realisations each:
+H, a shallower limit inside the window ($V_{\rm lim}=6$ against 8 outside); I, a constant factor 0.5
+inside the window; and J, a direction effect in a larger window ($|l|<60^\circ$, $|b|<25^\circ$) than
+the one fitted. Table~\ref{tab:region_mock} gives the bias and scatter of the total.
+\begin{itemize}
+\item \textbf{The contrast model does no harm when there is no direction effect} (A, F, B, E, C: paired
+ratio to the single curve 1.00--1.01), and the AIC prefers it falsely in 14--26\% of those mocks, close
+to the 16\% expected for one extra parameter.
+\item \textbf{It detects a direction effect inside the window} (AIC preference 98\% in H, 81\% in I) and
+removes most of the bias (H: $-0.10$ to $+0.01$; I: $-0.16$ to $-0.05$).
+\item \textbf{It does not fix a direction effect outside the fitted window} (J: $+0.17$).
+\item \textbf{The separate curves have 30\% less scatter}, but a control fit shows this comes from their
+fewer nodes per region: a single curve with as few nodes has the same scatter but is biased by $+0.2$
+to $+0.4$ in H, J and E, where the separate curves are not.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Mocks with direction-dependent completeness: mean and rms of $\ln(N_{\rm corr}/N_{\rm true})$ for the
+total ($1/q$), 100 realisations per scenario, and the fraction of mocks in which the AIC prefers the contrast
+model over the single curve.}
+\label{tab:region_mock}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+Scenario & Single $C(V)$ & Shared + contrast & Separate curves & AIC: contrast \\
+\midrule
+A: no direction effect & $-0.04$ / 0.51 & $-0.03$ / 0.51 & $+0.06$ / 0.35 & 15\% \\
+F: two surveys & $+0.10$ / 0.51 & $+0.10$ / 0.51 & $+0.15$ / 0.36 & 15\% \\
+H: shallower limit in window & $-0.10$ / 0.51 & $+0.01$ / 0.45 & $+0.03$ / 0.39 & 98\% \\
+I: factor 0.5 in window & $-0.16$ / 0.48 & $-0.05$ / 0.44 & $+0.13$ / 0.37 & 81\% \\
+J: effect outside fitted window & $+0.13$ / 0.50 & $+0.17$ / 0.51 & $+0.13$ / 0.44 & 44\% \\
+B: latitude band & $-0.11$ / 0.50 & $-0.09$ / 0.49 & $-0.04$ / 0.34 & 26\% \\
+E: dust disc & $-0.18$ / 0.45 & $-0.18$ / 0.44 & $+0.04$ / 0.35 & 14\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Real data} (Table~\ref{tab:region_real}, Fig.~\ref{fig:region}). We treat the regional
+models as a test of how sensitive the result is to direction-dependent selection, not as a substitute
+for the extinction maps.
+\begin{itemize}
+\item \textbf{Without extinction the data prefer direction dependence}: the separate curves are
+preferred by $\Delta{\rm AIC}=-4.2$, with the inner curve falling well below the outer one at faint $V$
+($\ln C_{\rm in}-\ln C_{\rm out}=-1.65$ at $V=12$). As expected from Sec.~\ref{sec:nodustbias}, the weights
+of clusters now in the window rise (summed $1/q$: 186 to 299), and the total rises from 749 to 802.
+\item \textbf{But the two-region split leaves most of the no-dust halo excess in place.} The summed $1/q$
+of the 43 GCs at $\dhel>15$ kpc falls only from 453 to 376, against 135 with the maps, because the outer
+curve stays steep ($C_{\rm out}=0.064$ at $V=14$ without dust, 0.23 with the maps). Although 84\% of
+the orbit samples with $A_V>1$ lie inside the window, that steepness is not set by the halo clusters or by
+dusty sightlines outside the window. Decomposing $\partial\ln L/\partial\lambda$, where $\lambda$ scales
+the outer curve's $\ln C$, into per-cluster terms shows that the pull towards a steeper outer curve
+comes from the 41 clusters now inside the window whose orbits leave it ($+10.3$, balanced by $-9.5$ from
+the 77 now outside whose orbits enter it). The halo clusters ($-2.1$) and the clusters with dusty
+off-window orbit segments ($-2.3$) pull the other way. The two regional curves are coupled through these
+crossing orbits: the extra loss of inner clusters that the model cannot attribute to dust is partly
+assigned to the outer curve, which then also applies to the halo. A third region (low latitude outside
+the window, $|b|<15^\circ$) removes more of the excess (halo 257, total 575, $\Delta{\rm AIC}=-4.2$ against
+two regions) but not all of it. No single cluster dominates: in leave-one-out refits the ten most
+influential clusters carry 26\% of the total influence on the halo weight.
+\item \textbf{With the 3D maps the data do not prefer extra direction dependence}: $\Delta{\rm AIC}=+1.0$
+(contrast), $0.0$ (two separate curves) and $-1.1$ (three regions). The remaining inner/outer contrast of the
+two-region fits is $\ln C_{\rm in}-\ln C_{\rm out}=-0.27$ ($-0.53$ to $-0.02$), a factor of about 0.76 at all
+$V$.
+\item \textbf{The totals move by $-12$ to $+12\%$} (432 to 380--485 with $1/q$, maps high): 453 and 485 with
+two regions, 380 with three (halo weight 82). The intervals are no wider for the two-region models, with
+$p_{84}/p_{16}$ 1.96--1.99 for all three. The three-region fit has only 19 clusters now in its
+low-latitude region and two nodes there, so we do not adopt it.
+\item A check of the model, the $C$-weighted version of the $u$ test above, passes inside the window
+($p\approx0.6$) under every model, and fails mildly outside it ($p=0.01$--0.025) under every model, with
+or without the maps. Neither a regional curve nor the maps account for that residual, so some mismatch
+between model and data remains possible.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Real data: corrected totals with direction-dependent $C$; $\Delta{\rm AIC}$ relative to the single
+continuous $C(V)$ with the same extinction; 68\% bootstrap intervals.}
+\label{tab:region_real}
+\small\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{3}{c}{No extinction} & \multicolumn{3}{c}{Maps, high bracket} \\
+Model & $\Delta$AIC & $1/q$ & $1/V_{\max}$ & $\Delta$AIC & $1/q$ & $1/V_{\max}$ \\
+\midrule
+Single $C(V)$ & 0 & 749 ($467$--$1185$) & 563 ($348$--$841$) & 0 & 432 ($321$--$628$) & 393 ($274$--$573$) \\
+Shared + contrast & $-0.9$ & 732 ($485$--$1261$) & 567 ($384$--$875$) & $+1.0$ & 453 ($333$--$657$) & 408 ($298$--$559$) \\
+Separate curves & $-4.2$ & 802 ($592$--$1334$) & 671 ($491$--$938$) & $+0.0$ & 485 ($361$--$719$) & 437 ($316$--$598$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{paper_region.png}
+\caption{Direction-dependent completeness without extinction (top) and with map extinction (bottom, high
+bracket). (a, c) $C$ for the single curve (black), and for the outer sky (blue) and the inner window
+$|l|<30^\circ$, $|b|<15^\circ$ (orange), with separate curves (solid) or a shared curve plus a constant
+contrast (dotted). (b, d) Corrected $\MV$ distributions with $1/q$; band: 68\% bootstrap for the separate
+curves.}
+\label{fig:region}
+\end{figure}
+
+%======================================================================
+\section{Summary of results and error budget}
+\label{sec:budget}
+
+With continuous $C(V)$, 3D-map extinction (high bracket) and own-orbit weights, the 165 GCs with 6D
+data correct to $432$ ($68\%$: $321$--$628$), about 2.6 times the observed number, of which $208$
+($137$--$314$) are fainter than $\MV=-6.5$, against 55 observed. Table~\ref{tab:budget} lists how
+each choice moves the total. The refinements of the weighting, the faint tail and the direction
+dependence move it by up to 12\%; the bootstrap interval spans $-26$ to $+45\%$. The two changes that
+matter are the extinction along the orbits, a factor of 1.7, and the continuous $C(V)$, which in mocks
+fixed a factor-of-two undercount of faint clusters. The systematics in the last three rows are not yet
+quantified.
+
+\begin{table}[h]
+\centering
+\caption{Error budget for the corrected total (continuous $C(V)$, maps high bracket, $1/q$: 432).}
+\label{tab:budget}
+\small
+\begin{tabular}{lll}
+\toprule
+Source & Range of the total & Relative \\
+\midrule
+Sampling (cluster bootstrap, 68\%) & 321--628 & $-26$\%, $+45$\% \\
+Weighting ($1/q$, three $1/V_{\max}$ forms) & 393--432 & $-9$\% \\
+Faint-end tail shape (three variants) & 424--457 & $-2$\%, $+6$\% \\
+Direction-dependent $C$ (two or three regions) & 380--485 & $-12$\%, $+12$\% \\
+Map bracket (high, low) & 432--461 & $+7$\% \\
+Extinction treatment (none vs maps) & 749 vs 432--461 & factor 1.7 \\
+Anchor (brightest $V$ complete) & all weights scale as $1/C_{\rm anchor}$ & not quantified \\
+Phase mixing, static potential, orbit errors & --- & not quantified \\
+Clusters on never-detectable orbits & --- & not identifiable \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The final answer}
+\label{sec:final}
+
+\begin{equation}
+N_{\rm GC} \approx 430^{+215}_{-125}\qquad(68\%,\ \text{sampling and quantified systematics}),
+\label{eq:final}
+\end{equation}
+about 2.6 times the 165 GCs with 6D data. Of these, about 210 (68\%: 125--325, sampling and quantified systematics; 140--315 from sampling alone) are
+fainter than $\MV=-6.5$, against 55 observed (Fig.~\ref{fig:final}).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{paper_final.png}
+\caption{The final model: corrected $\MV$ (a) and [Fe/H] (b) distributions with the continuous $C(V)$,
+3D-map extinction (high bracket) and own-orbit $1/q$ weights. Dark band: 68\% cluster bootstrap
+(sampling); light band: sampling and the quantified systematics in quadrature. The systematic part is
+evaluated in each bin from the per-cluster weights of every alternative in Table~\ref{tab:budget} (weighting,
+tail shape, direction-dependent $C$, map bracket): for each component, the largest downward and upward
+change of the bin count, then quadrature over components. The legend in (a) gives the total and the faint
+count with the same construction (Eq.~\ref{eq:final}); (b) omits the one cluster without [Fe/H]. Lower
+panels: corrected/observed. The bootstrap band is calibrated in mocks for the total and faint counts only;
+in bins with a few observed clusters it is coarse.}
+\label{fig:final}
+\end{figure}
+
+\paragraph{What the central value is.} The total from the continuous $C(V)$ (Sec.~\ref{sec:vmax}), with
+extinction from 3D maps along every orbit (high bracket, Sec.~\ref{sec:ext}) and each cluster weighted by
+the inverse of its own orbit-averaged completeness, $1/q_i$: 432. This is the model the likelihood prefers
+(Table~\ref{tab:vmax_real}); ignoring extinction (749) is rejected by $\Delta{\rm AIC}\approx16$ and biased
+high for the reason given in Sec.~\ref{sec:nodustbias}.
+
+\paragraph{How the error bar is built.} We work in $\ln N$ and take each component's largest excursion
+from Table~\ref{tab:budget}:
+\begin{center}
+\small
+\begin{tabular}{lcc}
+\toprule
+Component & down & up \\
+\midrule
+Sampling (cluster bootstrap, 321--628) & $-0.30$ & $+0.37$ \\
+Weighting (393--432) & $-0.10$ & 0 \\
+Faint-tail shape (424--457) & $-0.02$ & $+0.06$ \\
+Direction-dependent $C$ (380--485) & $-0.13$ & $+0.12$ \\
+Map bracket (432--461) & 0 & $+0.07$ \\
+\midrule
+Quantified systematics, in quadrature & $-0.16$ & $+0.14$ \\
+Total, in quadrature & $-0.34$ & $+0.40$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+The total gives factors of $e^{-0.34}=0.71$ and $e^{0.40}=1.49$, i.e.\ 308--645 around 432. The sampling
+part is calibrated: in mocks matched to the observed sample, the 68\% bootstrap intervals cover the truth in
+63--79\% of realisations (Sec.~\ref{sec:faint}). The systematic ranges are spreads between model choices,
+not Gaussian errors. Adding the systematic total linearly to the sampling error instead ($-0.46$, $+0.52$)
+gives 275--725; adding every component linearly ($-0.54$, $+0.61$) gives 250--795. For the faint count the same construction gives systematics of $-0.29$ and $+0.16$, larger than
+for the total: the three-region $C$ ($-0.24$) and the $1/V_{\max}$ weighting ($-0.16$) both lower it, so
+the faint count is $208^{+116}_{-83}$ (125--325).
+
+\paragraph{What is not in the error bar.} Three effects are not quantified. If the brightest clusters,
+which anchor $C$, are themselves incomplete, every weight rises; clusters on orbits that are never
+detectable are counted by none of our weightings. Both can only increase $N$. Errors in the Galactic
+potential, the orbits and the phase-mixing assumption have unknown sign. Equation~\ref{eq:final} is
+therefore best read as about 430, most likely between 310 and 650, with the unquantified effects pointing
+upwards.
+
 %======================================================================
 \section{Limitations and next steps}
 \label{sec:limits}
 
 \begin{enumerate}
-\item \textbf{Unseen orbit families.} The $1/V_{\max}$ totals (Sec.~\ref{sec:vmax}) rest on orbits that do
-not depend on luminosity. The real data lean, not significantly, the other way. If faint GCs are
-preferentially on extended orbits, $1/V_{\max}$ is still a lower limit for them.
+\item \textbf{Unseen orbit families.} No weighting counts orbit families with no detected member
+unless an orbit population is assumed. The data favour at most a mild trend of orbit size with
+luminosity (Sec.~\ref{sec:faint}); a stronger one would make all four weightings low for faint clusters.
 \item \textbf{Extinction.} The 3D-map treatment rests on fixed conversions (in particular
 $A_V = 8.8\,A_{K_s}$ for Marshall, uncertain in the inner Galaxy) and on SFD beyond the maps' reach.
-Map uncertainties and alternative extinction laws are not propagated; mocks with map-based rather
-than analytic dust would test the full chain.
-\item \textbf{Error propagation.} The intervals cover sampling noise only. An ensemble of perturbed
-phase-space coordinates, alternative potentials and longer, denser integrations would give the
-systematic spread.
-\item \textbf{Realistic mocks and interval calibration.} The bootstrap intervals of the
-$1/V_{\max}$ totals cover the truth in 53--70\% of mocks (Sec.~\ref{sec:vmax}). Mocks matched to the
-observed sample size, magnitude--distance distribution and extinction would calibrate them directly.
-\item \textbf{Anchor and assumptions.} All absolute numbers assume the brightest-$V$ bin is complete.
-The method assumes phase mixing in a static axisymmetric potential; the in-situ azimuthal signal
-shows where that may fail.
+Map uncertainties and alternative extinction laws are not propagated beyond the low/high brackets;
+mocks with map-based rather than analytic dust would test the full chain.
+\item \textbf{Anchor.} All absolute numbers assume the brightest-$V$ clusters are complete. Every weight
+scales as $1/C_{\rm anchor}$; an independent census of the brightest GCs would test it.
+\item \textbf{Potential, phase mixing and orbit errors.} The intervals cover sampling noise only. An
+ensemble of perturbed phase-space coordinates and alternative potentials would give the systematic
+spread. The $u$ test fails mildly for clusters outside the inner window ($p=0.01$--0.025) under every
+completeness model (Sec.~\ref{sec:region}); groups that are not phase-mixed, such as the clusters of
+the Sagittarius dwarf, which all sit near the inner parts of their orbits, are one candidate.
+\item \textbf{Mock realism.} The calibrated coverage of Sec.~\ref{sec:faint} holds for mocks whose true
+completeness is the fitted one and whose population is quasi-spherical and isotropic; the misspecified
+controls show biases of up to $-0.35$ in $\ln$ for faint clusters.
 \end{enumerate}
 
 %======================================================================
